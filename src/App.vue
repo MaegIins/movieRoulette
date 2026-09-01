@@ -1,112 +1,15 @@
 <script setup>
 import { reactive, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { suggestMovies } from './tmdb.js'
+import { GENRES } from './data/genres.js'
+import { COUNTRIES } from './data/countries.js'
+import { DECADES } from './data/decades.js'
 
 const CATEGORIES = [
-  {
-    key: 'genre',
-    label: 'Genre',
-    duration: 1100,
-    list: [
-      'Action', 'Aventure', 'Animation', 'Comédie', 'Policier', 'Documentaire', 'Drame', 'Familial',
-      'Fantastique', 'Histoire', 'Horreur', 'Musique', 'Mystère', 'Romance', 'Science-fiction',
-      'Thriller', 'Téléfilm', 'Guerre', 'Western',
-    ],
-  },
-  { key: 'year', label: 'Année', duration: 1550, list: ['1980s', '1990s', '2000s', '2010s', '2020s'] },
-  {
-    key: 'country',
-    label: 'Pays',
-    duration: 2000,
-    list: [
-      'États-Unis', 'Royaume-Uni', 'France', 'Allemagne', 'Italie', 'Espagne', 'Japon', 'Corée du Sud', 'Chine',
-      'Hong Kong', 'Taïwan', 'Inde', 'Canada', 'Mexique', 'Brésil', 'Argentine', 'Chili',
-      'Colombie', 'Australie', 'Nouvelle-Zélande', 'Russie', 'Pologne', 'Suède', 'Norvège', 'Danemark',
-      'Finlande', 'Pays-Bas', 'Belgique', 'Suisse', 'Autriche', 'Irlande', 'Portugal',
-      'Grèce', 'Turquie', 'Iran', 'Israël', 'Égypte', 'Afrique du Sud', 'Nigeria', 'Thaïlande',
-      'Philippines', 'Indonésie', 'Vietnam', 'Malaisie', 'Singapour', 'Pakistan',
-      'République tchèque', 'Hongrie', 'Roumanie', 'Ukraine', 'Serbie', 'Croatie', 'Islande',
-    ],
-  },
+  { key: 'genre', label: 'Genre', duration: 1100, list: GENRES.map((g) => g.label) },
+  { key: 'year', label: 'Année', duration: 1550, list: DECADES.map((d) => d.label), weights: DECADES.map((d) => d.weight) },
+  { key: 'country', label: 'Pays', duration: 2000, list: COUNTRIES.map((c) => c.label), weights: COUNTRIES.map((c) => c.weight) },
 ]
-
-const SUBGENRES = {
-  Action: [
-    'Arts martiaux', 'Espionnage', 'Braquage', 'Super-héros', 'Buddy movie', 'Guerre urbaine',
-    'Cascades extrêmes', 'Vengeance', 'Course-poursuite', 'Un contre tous', 'Militaire',
-  ],
-  Aventure: [
-    'Exploration', 'Pirates', 'Survie', 'Quête', 'Road trip', 'Chasse au trésor',
-    'Jungle', 'Expédition', 'Voyage initiatique', 'Monde perdu', 'Île déserte',
-  ],
-  Animation: [
-    'Stop-motion', 'Anime', 'Jeunesse', 'Fable', 'Adulte', 'Conte',
-    'Super-héros animé', 'Musical animé', 'Science-fiction animée', 'Aventure animée', 'Buddy animé',
-  ],
-  Comédie: [
-    'Comédie romantique', 'Comédie noire', 'Parodie', 'Comédie musicale', 'Buddy comedy', 'Satire',
-    'Comédie potache', 'Screwball', 'Mockumentaire', 'Comédie de mœurs', 'Comédie familiale',
-  ],
-  Policier: [
-    'Polar', 'Braquage', 'Enquête', 'Film noir', 'Gangster', 'Corruption',
-    'Serial killer', 'Thriller judiciaire', 'Cavale', 'Infiltration', 'Crime organisé',
-  ],
-  Documentaire: [
-    'Nature', 'Vrai crime', 'Sport', 'Biographie', 'Société', 'Musical',
-    'Guerre', 'Politique', 'Portrait intime', 'Investigation', 'Environnement',
-  ],
-  Drame: [
-    'Drame social', 'Coming-of-age', 'Drame familial', 'Drame judiciaire', 'Drame historique', 'Mélodrame',
-    'Drame psychologique', 'Rédemption', 'Huis clos', 'Chronique intime', 'Maladie',
-  ],
-  Familial: [
-    'Conte de fées', 'Aventure jeunesse', 'Animaux', 'Magie', 'Amitié', 'Fête',
-    'Apprentissage', 'Fantaisie douce', 'Vacances', 'Famille recomposée', 'École',
-  ],
-  Fantastique: [
-    'Sorcellerie', 'Créatures', 'Monde parallèle', 'Conte gothique', 'Épopée fantastique', 'Magie urbaine',
-    'Créatures légendaires', 'Malédiction', 'Portail magique', 'Héros élu', 'Mythologie',
-  ],
-  Histoire: [
-    'Biopic', 'Guerre historique', 'Époque médiévale', 'Antiquité', 'Révolution', 'Reconstitution',
-    'Épopée royale', 'Colonisation', 'Renaissance', 'Guerre froide', 'Cour royale',
-  ],
-  Horreur: [
-    'Slasher', 'Épouvante surnaturelle', 'Found footage', 'Zombies', 'Horreur psychologique', 'Body horror',
-    'Maison hantée', 'Possession', 'Horreur folklorique', 'Survie horrifique', 'Créature horrifique', 'Horreur cosmique',
-  ],
-  Musique: [
-    'Comédie musicale', 'Biopic musical', 'Concert', 'Opéra rock', 'Jukebox musical', 'Musique du monde',
-    'Battle musical', 'Formation de groupe', 'Comeback', 'Musique classique',
-  ],
-  Mystère: [
-    'Whodunit', 'Complot', 'Enquête', 'Suspense', 'Thriller psychologique', 'Détective',
-    'Disparition', 'Secret de famille', 'Mystère surnaturel', 'Enquête journalistique',
-  ],
-  Romance: [
-    'Comédie romantique', 'Romance dramatique', 'Romance historique', 'Amour impossible', 'Triangle amoureux', 'Romance d’été',
-    'Amour interdit', 'Retrouvailles', 'Amour à distance', 'Romance queer',
-  ],
-  'Science-fiction': [
-    'Dystopie', 'Voyage dans le temps', 'Extraterrestres', 'Cyberpunk', 'Espace', 'Post-apocalyptique',
-    'Intelligence artificielle', 'Clonage', 'Exploration spatiale', 'Robots', 'Réalité virtuelle',
-  ],
-  Thriller: [
-    'Thriller psychologique', 'Thriller politique', 'Thriller d’espionnage', 'Thriller juridique', 'Home invasion', 'Course contre la montre',
-    'Complot', 'Traque', 'Manipulation', 'Vengeance',
-  ],
-  Téléfilm: [
-    'Romance TV', 'Drame TV', 'Saga', 'Mini-série', 'Adaptation', 'Fêtes de fin d’année',
-    'Chronique familiale', 'Anthologie',
-  ],
-  Guerre: [
-    'Guerre mondiale', 'Guérilla', 'Résistance', 'Front', 'Prisonnier de guerre', 'Après-guerre',
-    'Espionnage militaire', 'Bataille navale', 'Guerre civile', 'Enfance en temps de guerre',
-  ],
-  Western: [
-    'Spaghetti western', 'Néo-western', 'Hors-la-loi', 'Cowboy', 'Frontière', 'Chasse à l’homme',
-    'Guerre indienne', 'Chercheur d’or', 'Shérif', 'Vengeance dans l’Ouest',
-  ],
-}
 
 const reels = reactive(
   Object.fromEntries(
@@ -130,16 +33,21 @@ function updateCellHeight() {
   if (subProbeRef.value) subCellHeight.value = subProbeRef.value.offsetHeight
 }
 
+function onKeydown(e) {
+  if (e.key === 'Escape' && showModal.value) showModal.value = false
+}
+
 onMounted(() => {
   updateCellHeight()
   window.addEventListener('resize', updateCellHeight)
+  window.addEventListener('keydown', onKeydown)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateCellHeight)
+  window.removeEventListener('keydown', onKeydown)
   if (tickInterval) clearInterval(tickInterval)
 })
 
-// ---------- sound ----------
 let audioCtx = null
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
@@ -189,13 +97,24 @@ function stopTicking() {
   }
 }
 
-// ---------- reel spin ----------
-function spinReel(reel, list, durationMs, heightPx, onDone) {
+// pondère le tirage sans jamais exclure une option
+function weightedIndex(weights) {
+  const total = weights.reduce((sum, w) => sum + w, 0)
+  let r = Math.random() * total
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return i
+  }
+  return weights.length - 1
+}
+
+function spinReel(reel, list, durationMs, heightPx, onDone, weights) {
   reel.started = true
   reel.spinning = true
 
   const loops = 3 + Math.floor(Math.random() * 2)
-  const extra = Math.floor(Math.random() * list.length)
+  const targetIndex = weights ? weightedIndex(weights) : Math.floor(Math.random() * list.length)
+  const extra = (targetIndex + 1) % list.length
   const totalSteps = loops * list.length + extra
 
   const currentLabel = reel.strip[reel.strip.length - 1]
@@ -240,9 +159,13 @@ function roll() {
   sub.translate = 0
   sub.transitionMs = 0
   rollingSub.value = false
+  suggestions.value = []
+  suggestError.value = ''
+  showModal.value = false
+  seenMovieIds = new Set()
   playThunk()
   startTicking()
-  CATEGORIES.forEach((c) => spinReel(reels[c.key], c.list, c.duration, cellHeight.value, checkAllDone))
+  CATEGORIES.forEach((c) => spinReel(reels[c.key], c.list, c.duration, cellHeight.value, checkAllDone, c.weights))
 }
 
 function currentGenre() {
@@ -251,7 +174,7 @@ function currentGenre() {
 
 function rollSub() {
   if (rollingSub.value || rolling.value || !reels.genre.started) return
-  const list = SUBGENRES[currentGenre()] || ['Classique']
+  const list = GENRES.find((g) => g.label === currentGenre())?.subgenres.map((s) => s.label) || ['Classique']
   rollingSub.value = true
   updateCellHeight()
   playThunk()
@@ -262,39 +185,82 @@ function rollSub() {
     playChime()
   })
 }
+
+const suggestions = ref([])
+const loadingSuggestions = ref(false)
+const suggestError = ref('')
+const relaxedCriteria = ref([])
+const showModal = ref(false)
+let seenMovieIds = new Set()
+
+const RELAXED_LABELS = { subgenre: 'le sous-genre', country: 'le pays', year: 'la décennie' }
+
+function joinFr(items) {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`
+}
+
+async function fetchSuggestions() {
+  if (loadingSuggestions.value || rolling.value || !reels.genre.started) return
+  showModal.value = true
+  loadingSuggestions.value = true
+  suggestError.value = ''
+  suggestions.value = []
+  relaxedCriteria.value = []
+  try {
+    const { movies, relaxed } = await suggestMovies({
+      genre: reels.genre.strip[reels.genre.strip.length - 1],
+      year: reels.year.strip[reels.year.strip.length - 1],
+      country: reels.country.strip[reels.country.strip.length - 1],
+      subgenre: sub.started ? sub.strip[sub.strip.length - 1] : null,
+      excludeIds: seenMovieIds,
+    })
+    suggestions.value = movies
+    relaxedCriteria.value = relaxed
+    movies.forEach((m) => seenMovieIds.add(m.id))
+    if (suggestions.value.length === 0) suggestError.value = 'Aucun film trouvé pour cette combinaison.'
+  } catch (err) {
+    suggestError.value = err.message || 'Erreur lors de la recherche.'
+  } finally {
+    loadingSuggestions.value = false
+  }
+}
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center gap-10 sm:gap-16 px-4 sm:px-6 py-10 sm:py-16 relative overflow-x-hidden">
-    <!-- invisible probes: measure actual rendered cell height at the current breakpoint -->
-    <div ref="probeRef" class="reel-box w-52 h-52 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10" aria-hidden="true"></div>
-    <div ref="subProbeRef" class="reel-box w-full max-w-72 h-16 sm:max-w-96 sm:h-20 absolute opacity-0 pointer-events-none -z-10" aria-hidden="true"></div>
+    <!-- mesure la hauteur réelle des cases pour aligner le défilement des rouleaux -->
+    <div ref="probeRef" class="w-52 h-52 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
+    <div ref="subProbeRef" class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
 
     <button
-      class="mute-btn absolute top-4 right-4 sm:top-6 sm:right-6 text-xs font-semibold tracking-widest uppercase"
+      class="absolute top-4 right-4 sm:top-6 sm:right-6 text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
       @click="muted = !muted"
       :title="muted ? 'Activer le son' : 'Couper le son'"
     >
       {{ muted ? 'Son coupé' : 'Son actif' }}
     </button>
 
-    <div class="mast flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none">
-      <div class="mast-rule"></div>
-      <h1 class="mast-title text-3xl sm:text-5xl text-center">Movie Roulette</h1>
-      <p class="mast-subtitle text-center">Trouve quoi regarder</p>
-      <div class="mast-rule"></div>
+    <div class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none text-center">
+      <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
+      <h1 class="font-display font-semibold tracking-tight text-3xl sm:text-5xl">Movie Roulette</h1>
+      <p class="text-muted tracking-[0.24em] uppercase text-[0.7rem]">Trouve quoi regarder</p>
+      <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
     </div>
 
     <div class="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-center gap-8 sm:gap-10">
       <div v-for="cat in CATEGORIES" :key="cat.key" class="flex flex-col items-center gap-3">
-        <span class="field-label">{{ cat.label }}</span>
-        <div class="reel-box w-52 h-52 sm:w-64 sm:h-64" :class="{ 'is-spinning': reels[cat.key].spinning }">
+        <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">{{ cat.label }}</span>
+        <div
+          class="w-52 h-52 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
+          :class="reels[cat.key].spinning ? 'border-accent' : 'border-line'"
+        >
           <div v-if="!reels[cat.key].started" class="w-full h-full flex items-center justify-center">
-            <span class="text-2xl sm:text-3xl font-medium text-[var(--muted)]">—</span>
+            <span class="text-2xl sm:text-3xl font-medium text-muted">—</span>
           </div>
-          <div v-else class="reel-window">
+          <div v-else class="overflow-hidden h-full rounded-md">
             <div
-              class="reel-track"
+              class="flex flex-col"
               :style="{
                 transform: `translateY(${reels[cat.key].translate}px)`,
                 transitionProperty: 'transform',
@@ -302,8 +268,8 @@ function rollSub() {
                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
               }"
             >
-              <div v-for="(item, i) in reels[cat.key].strip" :key="i" class="reel-item" :style="{ height: `${cellHeight}px` }">
-                <span class="text-2xl sm:text-3xl font-semibold px-2 text-center">{{ item }}</span>
+              <div v-for="(item, i) in reels[cat.key].strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-3" :style="{ height: `${cellHeight}px` }">
+                <span class="text-2xl sm:text-3xl font-semibold text-center">{{ item }}</span>
               </div>
             </div>
           </div>
@@ -311,35 +277,107 @@ function rollSub() {
       </div>
     </div>
 
-    <button class="btn-primary rounded-md px-10 sm:px-14 py-4 sm:py-5 text-base sm:text-lg w-full max-w-xs sm:w-auto" :disabled="rolling" @click="roll">
-      {{ rolling ? 'En cours…' : 'Lancer' }}
-    </button>
+    <TransitionGroup
+      tag="div"
+      name="btn-row"
+      class="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 w-full max-w-xs sm:max-w-none sm:w-auto"
+    >
+      <button
+        key="roll"
+        class="font-semibold tracking-[0.08em] uppercase bg-accent text-accent-ink border border-accent transition duration-150 hover:bg-accent-hover hover:border-accent-hover active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-10 sm:px-14 py-4 sm:py-5 text-base sm:text-lg w-full max-w-xs sm:w-auto"
+        :disabled="rolling"
+        @click="roll"
+      >
+        {{ rolling ? 'En cours…' : 'Lancer' }}
+      </button>
 
-    <div v-if="reels.genre.started && !rolling" class="flex flex-col items-center gap-4 w-full max-w-xs sm:max-w-none">
-      <div v-if="sub.started" class="flex flex-col items-center gap-3 w-full">
-        <span class="field-label">Sous-genre</span>
-        <div class="reel-box w-full max-w-72 h-16 sm:max-w-96 sm:h-20" :class="{ 'is-spinning': sub.spinning }">
-          <div class="reel-window">
-            <div
-              class="reel-track"
-              :style="{
-                transform: `translateY(${sub.translate}px)`,
-                transitionProperty: 'transform',
-                transitionDuration: `${sub.transitionMs}ms`,
-                transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-              }"
-            >
-              <div v-for="(item, i) in sub.strip" :key="i" class="reel-item" :style="{ height: `${subCellHeight}px` }">
-                <span class="text-lg sm:text-xl font-semibold px-2 text-center">{{ item }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn-outline rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto" :disabled="rollingSub" @click="rollSub">
+      <button
+        v-if="reels.genre.started && !rolling"
+        key="subgenre"
+        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
+        :disabled="rollingSub"
+        @click="rollSub"
+      >
         {{ rollingSub ? 'En cours…' : sub.started ? 'Relancer le sous-genre' : 'Sous-genre' }}
       </button>
+
+      <button
+        v-if="reels.genre.started && !rolling"
+        key="suggest"
+        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
+        :disabled="loadingSuggestions"
+        @click="fetchSuggestions"
+      >
+        {{ loadingSuggestions ? 'Recherche…' : 'Proposer 3 films' }}
+      </button>
+    </TransitionGroup>
+
+    <div v-if="sub.started" class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none">
+      <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">Sous-genre</span>
+      <div
+        class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 border rounded-lg bg-panel transition-colors duration-300"
+        :class="sub.spinning ? 'border-accent' : 'border-line'"
+      >
+        <div class="overflow-hidden h-full rounded-md">
+          <div
+            class="flex flex-col"
+            :style="{
+              transform: `translateY(${sub.translate}px)`,
+              transitionProperty: 'transform',
+              transitionDuration: `${sub.transitionMs}ms`,
+              transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            }"
+          >
+            <div v-for="(item, i) in sub.strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-3" :style="{ height: `${subCellHeight}px` }">
+              <span class="text-lg sm:text-xl font-semibold text-center">{{ item }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showModal" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showModal = false">
+          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showModal = false" aria-label="Fermer">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-5">Suggestions</h2>
+            <p v-if="loadingSuggestions" class="text-center text-muted py-4">Recherche…</p>
+            <p v-else-if="suggestError" class="text-center text-accent py-4">{{ suggestError }}</p>
+            <template v-else>
+              <p v-if="relaxedCriteria.length" class="text-center text-muted text-[0.8rem] italic mb-4">
+                Pour trouver des résultats, la recherche a été élargie sur : {{ joinFr(relaxedCriteria.map((c) => RELAXED_LABELS[c])) }}.
+              </p>
+              <div class="flex flex-wrap justify-center gap-4">
+                <div v-for="m in suggestions" :key="m.id" class="w-40 border border-line rounded-lg bg-panel overflow-hidden">
+                  <a :href="m.tmdbUrl" target="_blank" rel="noopener noreferrer">
+                    <img v-if="m.posterUrl" :src="m.posterUrl" :alt="m.title" class="w-full aspect-[2/3] object-cover block bg-line transition-opacity hover:opacity-85" />
+                    <div v-else class="w-full aspect-[2/3] flex items-center justify-center bg-line text-muted transition-opacity hover:opacity-85">—</div>
+                  </a>
+                  <div class="p-3">
+                    <p class="font-display font-semibold text-[0.95rem] leading-tight">{{ m.title }}</p>
+                    <p class="text-muted text-xs mt-1">{{ m.year }}<template v-if="m.country"> · {{ m.country }}</template></p>
+                    <p class="mt-[0.4rem] text-[0.7rem]">
+                      <a :href="m.tmdbUrl" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">TMDB</a>
+                      <span class="text-muted" aria-hidden="true"> · </span>
+                      <a :href="m.letterboxdUrl" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">Letterboxd</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-center mt-5">
+                <button
+                  class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-6 py-2 text-xs"
+                  :disabled="loadingSuggestions"
+                  @click="fetchSuggestions"
+                >
+                  Autres films
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
