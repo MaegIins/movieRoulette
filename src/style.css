@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Inter", "Helvetica Neue", sans-serif;
+}
+
+:root {
+  --bg: #f4f1ea;
+  --panel: #eeeae1;
+  --ink: #17140f;
+  --muted: #6b665c;
+  --line: rgba(23, 20, 15, 0.18);
+  --accent: #a3272a;
+  --accent-hover: #862022;
+  --accent-ink: #fdf9f2;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+/* ---------- masthead ---------- */
+
+.mast {
+  text-align: center;
+}
+
+.mast-rule {
+  width: 100%;
+  max-width: 22rem;
+  height: 1px;
+  background: var(--line);
+  margin: 0 auto;
+}
+
+.mast-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mast-subtitle {
+  font-family: var(--font-body);
+  color: var(--muted);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+/* ---------- fields ---------- */
+
+.field-label {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.reel-box {
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  transition: border-color 0.3s ease;
+}
+
+.reel-box.is-spinning {
+  border-color: var(--accent);
+}
+
+.reel-window {
+  overflow: hidden;
+  height: 100%;
+  border-radius: 0.4rem;
+}
+
+.reel-track {
+  display: flex;
+  flex-direction: column;
+}
+
+.reel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0 0.75rem;
+}
+
+/* ---------- buttons ---------- */
+
+.btn-primary {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn-outline:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mute-btn {
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.mute-btn:hover {
+  color: var(--ink);
+}
