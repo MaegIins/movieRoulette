@@ -1,14 +1,14 @@
 // iso = code ISO 3166-1 alpha-2 (paramètre with_origin_country de TMDB), utilisé comme identifiant stable
 // weight = poids relatif du tirage, les grands pays producteurs sont un peu favorisés
 export const COUNTRIES = [
-  { iso: 'US', weight: 2, labels: { fr: 'États-Unis', en: 'United States' } },
-  { iso: 'GB', weight: 2, labels: { fr: 'Royaume-Uni', en: 'United Kingdom' } },
-  { iso: 'FR', weight: 2, labels: { fr: 'France', en: 'France' } },
+  { iso: 'US', weight: 1, labels: { fr: 'États-Unis', en: 'United States' } },
+  { iso: 'GB', weight: 1, labels: { fr: 'Royaume-Uni', en: 'United Kingdom' } },
+  { iso: 'FR', weight: 1, labels: { fr: 'France', en: 'France' } },
   { iso: 'DE', weight: 1, labels: { fr: 'Allemagne', en: 'Germany' } },
-  { iso: 'IT', weight: 2, labels: { fr: 'Italie', en: 'Italy' } },
+  { iso: 'IT', weight: 1, labels: { fr: 'Italie', en: 'Italy' } },
   { iso: 'ES', weight: 1, labels: { fr: 'Espagne', en: 'Spain' } },
-  { iso: 'JP', weight: 2, labels: { fr: 'Japon', en: 'Japan' } },
-  { iso: 'KR', weight: 2, labels: { fr: 'Corée du Sud', en: 'South Korea' } },
+  { iso: 'JP', weight: 1, labels: { fr: 'Japon', en: 'Japan' } },
+  { iso: 'KR', weight: 1, labels: { fr: 'Corée du Sud', en: 'South Korea' } },
   { iso: 'CN', weight: 1, labels: { fr: 'Chine', en: 'China' } },
   { iso: 'HK', weight: 1, labels: { fr: 'Hong Kong', en: 'Hong Kong' } },
   { iso: 'TW', weight: 1, labels: { fr: 'Taïwan', en: 'Taiwan' } },
