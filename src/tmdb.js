@@ -72,6 +72,7 @@ export async function suggestMovies({
   minVoteAverage = 0,
   voteCountMode = 'min',
   voteAverageMode = 'min',
+  count = 3,
   locale = 'fr',
 }) {
   if (!import.meta.env.VITE_TMDB_API_KEY) {
@@ -104,39 +105,45 @@ export async function suggestMovies({
   tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country'] })
   tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
 
-  for (const tier of tiers) {
+  for (let i = 0; i < tiers.length; i++) {
+    const tier = tiers[i]
+    const isLastTier = i === tiers.length - 1
     const cleanParams = Object.fromEntries(Object.entries(tier.params).filter(([, v]) => v !== undefined))
     const page = 1 + Math.floor(Math.random() * 3)
     let data = await discover({ ...cleanParams, page: String(page) }, language)
     let pool = data.results || []
-    if (pool.length < 5 && page !== 1) {
+    if (pool.length < Math.max(5, count) && page !== 1) {
       data = await discover({ ...cleanParams, page: '1' }, language)
       pool = [...pool, ...(data.results || [])]
     }
     pool = [...new Map(pool.map((m) => [m.id, m])).values()]
-    if (pool.length >= 1) {
-      const unseen = pool.filter((m) => !excludeIds.has(m.id))
-      const results = unseen.length ? unseen : pool // tout a déjà été vu : on accepte les répétitions plutôt que rien
-      const movies = pickRandom(results, Math.min(3, results.length)).map((m) => ({
-        id: m.id,
-        title: m.title,
-        year: m.release_date ? m.release_date.slice(0, 4) : '?',
-        posterUrl: m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null,
-        tmdbUrl: `https://www.themoviedb.org/movie/${m.id}`,
-        letterboxdUrl: `https://letterboxd.com/tmdb/${m.id}/`,
-        country: null,
-      }))
+    const unseen = pool.filter((m) => !excludeIds.has(m.id))
 
-      if (tier.relaxed.includes('country')) {
-        await Promise.all(
-          movies.map(async (m) => {
-            m.country = await fetchProductionCountry(m.id, language).catch(() => null)
-          }),
-        )
-      }
+    // on ne s'arrête sur ce palier que s'il offre assez de films inédits ;
+    // sinon on tente un palier plus large plutôt que de se contenter de trop peu de résultats
+    if (unseen.length < count && !isLastTier) continue
+    if (!unseen.length && !pool.length) continue
 
-      return { movies, relaxed: tier.relaxed }
+    const results = unseen.length ? unseen : pool // tout a déjà été vu : on accepte les répétitions plutôt que rien
+    const movies = pickRandom(results, Math.min(count, results.length)).map((m) => ({
+      id: m.id,
+      title: m.title,
+      year: m.release_date ? m.release_date.slice(0, 4) : '?',
+      posterUrl: m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null,
+      tmdbUrl: `https://www.themoviedb.org/movie/${m.id}`,
+      letterboxdUrl: `https://letterboxd.com/tmdb/${m.id}/`,
+      country: null,
+    }))
+
+    if (tier.relaxed.includes('country')) {
+      await Promise.all(
+        movies.map(async (m) => {
+          m.country = await fetchProductionCountry(m.id, language).catch(() => null)
+        }),
+      )
     }
+
+    return { movies, relaxed: tier.relaxed }
   }
 
   return { movies: [], relaxed: [] }

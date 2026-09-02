@@ -306,8 +306,9 @@ const minVoteCount = ref(savedFilterSettings.minVoteCount ?? 50)
 const minVoteAverage = ref(savedFilterSettings.minVoteAverage ?? 0)
 const voteCountMode = ref(savedFilterSettings.voteCountMode === 'max' ? 'max' : 'min')
 const voteAverageMode = ref(savedFilterSettings.voteAverageMode === 'max' ? 'max' : 'min')
+const movieCount = ref(savedFilterSettings.movieCount ?? 3)
 
-watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode], () => {
+watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode, movieCount], () => {
   try {
     localStorage.setItem(
       FILTER_SETTINGS_KEY,
@@ -316,6 +317,7 @@ watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode], () => {
         minVoteAverage: minVoteAverage.value,
         voteCountMode: voteCountMode.value,
         voteAverageMode: voteAverageMode.value,
+        movieCount: movieCount.value,
       }),
     )
   } catch {
@@ -350,6 +352,7 @@ async function fetchSuggestions() {
       minVoteAverage: minVoteAverage.value,
       voteCountMode: voteCountMode.value,
       voteAverageMode: voteAverageMode.value,
+      count: movieCount.value,
       locale: locale.value,
     })
     suggestions.value = movies
@@ -398,10 +401,14 @@ async function fetchSuggestions() {
       <div v-for="cat in CATEGORIES" :key="cat.key" class="flex flex-col items-center gap-3">
         <button
           type="button"
-          class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] px-2 py-1 -mx-2 -my-1 transition-colors"
+          class="flex items-center gap-1 font-semibold tracking-[0.16em] uppercase text-[0.7rem] px-2 py-1 -mx-2 -my-1 border-b border-dotted border-current/45 hover:border-current/80 active:border-current active:text-ink cursor-pointer transition-colors"
           :class="excluded[cat.key].size ? 'text-accent' : 'text-muted hover:text-ink'"
+          :title="t('filter.hint')"
           @click="openFilter(cat.key)"
         >
+          <svg class="w-2.5 h-2.5 opacity-70 sm:hidden" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
           {{ categoryLabel(cat.key) }}<template v-if="excluded[cat.key].size"> · {{ cat.fullList.length - excluded[cat.key].size }}</template>
         </button>
         <div
@@ -473,7 +480,7 @@ async function fetchSuggestions() {
         :disabled="loadingSuggestions"
         @click="fetchSuggestions"
       >
-        {{ loadingSuggestions ? t('suggest.loading') : t('suggest.button') }}
+        {{ loadingSuggestions ? t('suggest.loading') : t('suggest.button', { count: movieCount }) }}
       </button>
     </TransitionGroup>
 
@@ -536,7 +543,7 @@ async function fetchSuggestions() {
                   </div>
                 </div>
               </div>
-              <div class="flex justify-center mt-5">
+              <div v-if="suggestions.length >= movieCount" class="flex justify-center mt-5">
                 <button
                   class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-6 py-2 text-xs"
                   :disabled="loadingSuggestions"
@@ -680,10 +687,19 @@ async function fetchSuggestions() {
                 <p class="text-muted text-[0.7rem] mt-1">{{ voteAverageMode === 'max' ? t('settings.maxRatingDesc') : t('settings.minRatingDesc') }}</p>
               </div>
 
+              <div>
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="text-sm font-semibold">{{ t('settings.movieCount') }}</span>
+                  <span class="text-muted text-xs">{{ t('settings.movies', { count: movieCount }) }}</span>
+                </div>
+                <input type="range" min="1" max="9" step="1" v-model.number="movieCount" class="w-full accent-accent" />
+                <p class="text-muted text-[0.7rem] mt-1">{{ t('settings.movieCountDesc') }}</p>
+              </div>
+
               <button
                 type="button"
                 class="text-accent hover:underline text-xs self-center"
-                @click="minVoteCount = 50; minVoteAverage = 0; voteCountMode = 'min'; voteAverageMode = 'min'"
+                @click="minVoteCount = 50; minVoteAverage = 0; voteCountMode = 'min'; voteAverageMode = 'min'; movieCount = 3"
               >
                 {{ t('settings.reset') }}
               </button>
