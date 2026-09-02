@@ -57,6 +57,11 @@ function toggleExclude(key, item, event) {
   }
   set.add(item)
 }
+function uncheckAll(key) {
+  const cat = CATEGORIES.find((c) => c.key === key)
+  // on garde toujours au moins une option cochée, sinon plus rien ne peut être tiré
+  excluded[key] = new Set(cat.fullList.slice(1))
+}
 function effectivePool(cat) {
   const ex = excluded[cat.key]
   if (!ex.size) return { list: cat.fullList, weights: cat.fullWeights }
@@ -567,6 +572,7 @@ async function fetchSuggestions() {
             <p class="text-center text-muted text-xs mb-4">
               {{ t('filter.selected', { count: activeCategory.fullList.length - excluded[filterKey].size, total: activeCategory.fullList.length }) }}
               <button v-if="excluded[filterKey].size" type="button" class="text-accent hover:underline ml-2" @click="excluded[filterKey].clear()">{{ t('filter.checkAll') }}</button>
+              <button v-if="excluded[filterKey].size < activeCategory.fullList.length - 1" type="button" class="text-accent hover:underline ml-2" @click="uncheckAll(filterKey)">{{ t('filter.uncheckAll') }}</button>
             </p>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
               <label
