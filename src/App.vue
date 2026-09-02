@@ -82,6 +82,7 @@ function updateCellHeight() {
 function onKeydown(e) {
   if (e.key !== 'Escape') return
   if (filterKey.value) filterKey.value = null
+  else if (showSettings.value) showSettings.value = false
   else if (showModal.value) showModal.value = false
 }
 
@@ -249,6 +250,10 @@ const relaxedCriteria = ref([])
 const showModal = ref(false)
 let seenMovieIds = new Set()
 
+const showSettings = ref(false)
+const minVoteCount = ref(50)
+const minVoteAverage = ref(0)
+
 const RELAXED_LABELS = { subgenre: 'le sous-genre', country: 'le pays', year: 'la décennie' }
 
 function joinFr(items) {
@@ -270,6 +275,8 @@ async function fetchSuggestions() {
       country: reels.country.strip[reels.country.strip.length - 1],
       subgenre: sub.started ? sub.strip[sub.strip.length - 1] : null,
       excludeIds: seenMovieIds,
+      minVoteCount: minVoteCount.value,
+      minVoteAverage: minVoteAverage.value,
     })
     suggestions.value = movies
     relaxedCriteria.value = relaxed
@@ -285,13 +292,21 @@ async function fetchSuggestions() {
 
 <template>
   <div class="min-h-screen flex flex-col relative overflow-x-hidden">
-    <button
-      class="absolute top-4 right-4 sm:top-6 sm:right-6 text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
-      @click="muted = !muted"
-      :title="muted ? 'Activer le son' : 'Couper le son'"
-    >
-      {{ muted ? 'Son coupé' : 'Son actif' }}
-    </button>
+    <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-4">
+      <button
+        class="text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
+        @click="muted = !muted"
+        :title="muted ? 'Activer le son' : 'Couper le son'"
+      >
+        {{ muted ? 'Son coupé' : 'Son actif' }}
+      </button>
+      <button
+        class="text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
+        @click="showSettings = true"
+      >
+        Paramètres
+      </button>
+    </div>
 
     <div class="flex-1 flex flex-col items-center justify-center gap-10 sm:gap-16 px-4 sm:px-6 py-10 sm:py-16">
     <!-- mesure la hauteur réelle des cases pour aligner le défilement des rouleaux -->
@@ -486,6 +501,45 @@ async function fetchSuggestions() {
                 />
                 <span class="truncate">{{ item }}</span>
               </label>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showSettings" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showSettings = false">
+          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-sm w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showSettings = false" aria-label="Fermer">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-6">Paramètres</h2>
+
+            <div class="flex flex-col gap-6">
+              <div>
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="text-sm font-semibold">Popularité minimum</span>
+                  <span class="text-muted text-xs">{{ minVoteCount }} votes</span>
+                </div>
+                <input type="range" min="0" max="500" step="10" v-model.number="minVoteCount" class="w-full accent-accent" />
+                <p class="text-muted text-[0.7rem] mt-1">Nombre minimum de votes reçus sur TMDB. Plus haut = films plus connus.</p>
+              </div>
+
+              <div>
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="text-sm font-semibold">Note minimum</span>
+                  <span class="text-muted text-xs">{{ minVoteAverage > 0 ? `${minVoteAverage}/10` : 'aucune' }}</span>
+                </div>
+                <input type="range" min="0" max="10" step="0.5" v-model.number="minVoteAverage" class="w-full accent-accent" />
+                <p class="text-muted text-[0.7rem] mt-1">Note moyenne minimum sur TMDB, sur 10.</p>
+              </div>
+
+              <button
+                type="button"
+                class="text-accent hover:underline text-xs self-center"
+                @click="minVoteCount = 50; minVoteAverage = 0"
+              >
+                Réinitialiser
+              </button>
             </div>
           </div>
         </div>

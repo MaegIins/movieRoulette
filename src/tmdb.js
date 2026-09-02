@@ -64,7 +64,15 @@ async function fetchProductionCountry(id) {
   return data.production_countries?.[0]?.name ?? null
 }
 
-export async function suggestMovies({ genre, year, country, subgenre, excludeIds = new Set() }) {
+export async function suggestMovies({
+  genre,
+  year,
+  country,
+  subgenre,
+  excludeIds = new Set(),
+  minVoteCount = 50,
+  minVoteAverage = 0,
+}) {
   if (!import.meta.env.VITE_TMDB_API_KEY) {
     throw new Error('Clé TMDB manquante : crée un fichier .env avec VITE_TMDB_API_KEY (voir .env.example)')
   }
@@ -73,6 +81,7 @@ export async function suggestMovies({ genre, year, country, subgenre, excludeIds
   const countryCode = COUNTRY_CODES[country]
   const { gte, lte } = decadeRange(year)
   const base = { with_genres: genreId, 'primary_release_date.gte': gte, 'primary_release_date.lte': lte }
+  if (minVoteAverage > 0) base['vote_average.gte'] = minVoteAverage
 
   let keywordId = null
   const keywordTerm = subgenre ? SUBGENRE_KEYWORDS[subgenre] : null
@@ -84,11 +93,11 @@ export async function suggestMovies({ genre, year, country, subgenre, excludeIds
   const subgenreRelaxed = subgenre ? ['subgenre'] : []
   const tiers = []
   if (keywordId) {
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, 'vote_count.gte': 20 }, relaxed: [] })
+    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, 'vote_count.gte': minVoteCount }, relaxed: [] })
     tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: [] })
     tiers.push({ params: { ...base, with_keywords: keywordId }, relaxed: ['country'] })
   }
-  tiers.push({ params: { ...base, with_origin_country: countryCode, 'vote_count.gte': 50 }, relaxed: subgenreRelaxed })
+  tiers.push({ params: { ...base, with_origin_country: countryCode, 'vote_count.gte': minVoteCount }, relaxed: subgenreRelaxed })
   tiers.push({ params: { ...base, with_origin_country: countryCode }, relaxed: subgenreRelaxed })
   tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country'] })
   tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
