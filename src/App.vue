@@ -1,17 +1,36 @@
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { reactive, ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { suggestMovies } from './tmdb.js'
 import { GENRES } from './data/genres.js'
 import { COUNTRIES } from './data/countries.js'
 import { DECADES } from './data/decades.js'
+import { locale, t, joinList } from './i18n.js'
 
 const creationYear = 2026
 
 const CATEGORIES = [
-  { key: 'genre', label: 'Genre', duration: 1100, fullList: GENRES.map((g) => g.label) },
-  { key: 'year', label: 'Année', duration: 1550, fullList: DECADES.map((d) => d.label), fullWeights: DECADES.map((d) => d.weight) },
-  { key: 'country', label: 'Pays', duration: 2000, fullList: COUNTRIES.map((c) => c.label), fullWeights: COUNTRIES.map((c) => c.weight) },
+  { key: 'genre', duration: 1100, fullList: GENRES.map((g) => g.tmdbId) },
+  { key: 'year', duration: 1550, fullList: DECADES.map((d) => d.id), fullWeights: DECADES.map((d) => d.weight) },
+  { key: 'country', duration: 2000, fullList: COUNTRIES.map((c) => c.iso), fullWeights: COUNTRIES.map((c) => c.weight) },
 ]
+
+function categoryLabel(key) {
+  return t(`category.${key}`)
+}
+
+function itemLabel(catKey, id) {
+  if (id == null) return ''
+  if (catKey === 'genre') return GENRES.find((g) => g.tmdbId === id)?.labels[locale.value] ?? ''
+  if (catKey === 'year') return DECADES.find((d) => d.id === id)?.labels[locale.value] ?? ''
+  if (catKey === 'country') return COUNTRIES.find((c) => c.iso === id)?.labels[locale.value] ?? ''
+  return ''
+}
+
+function subgenreLabel(genreId, subId) {
+  if (subId == null) return ''
+  const genre = GENRES.find((g) => g.tmdbId === genreId)
+  return genre?.subgenres.find((s) => s.id === subId)?.labels[locale.value] ?? ''
+}
 
 const excluded = reactive({ genre: new Set(), year: new Set(), country: new Set() })
 const filterKey = ref(null)
@@ -59,11 +78,11 @@ function toggleLock(key) {
 
 const reels = reactive(
   Object.fromEntries(
-    CATEGORIES.map((c) => [c.key, { strip: [c.label], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false }]),
+    CATEGORIES.map((c) => [c.key, { strip: [null], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false }]),
   ),
 )
 
-const sub = reactive({ strip: ['Sous-genre'], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false })
+const sub = reactive({ strip: [null], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false })
 const SUB_DURATION = 1300
 
 const rolling = ref(false)
@@ -166,8 +185,8 @@ function spinReel(reel, list, durationMs, heightPx, onDone, weights) {
   const extra = (targetIndex + 1) % list.length
   const totalSteps = loops * list.length + extra
 
-  const currentLabel = reel.strip[reel.strip.length - 1]
-  const strip = [currentLabel]
+  const currentItem = reel.strip[reel.strip.length - 1]
+  const strip = [currentItem]
   for (let k = 1; k <= totalSteps; k++) strip.push(list[(k - 1) % list.length])
 
   reel.transitionMs = 0
@@ -208,7 +227,7 @@ function roll() {
   rolling.value = true
   updateCellHeight()
   sub.started = false
-  sub.strip = ['Sous-genre']
+  sub.strip = [null]
   sub.translate = 0
   sub.transitionMs = 0
   rollingSub.value = false
@@ -225,13 +244,15 @@ function roll() {
   })
 }
 
-function currentGenre() {
+function currentGenreId() {
   return reels.genre.strip[reels.genre.strip.length - 1]
 }
 
 function rollSub() {
   if (rollingSub.value || rolling.value || !reels.genre.started) return
-  const list = GENRES.find((g) => g.label === currentGenre())?.subgenres.map((s) => s.label) || ['Classique']
+  const genre = GENRES.find((g) => g.tmdbId === currentGenreId())
+  const list = genre ? genre.subgenres.map((s) => s.id) : []
+  if (!list.length) return
   rollingSub.value = true
   updateCellHeight()
   playThunk()
@@ -251,15 +272,48 @@ const showModal = ref(false)
 let seenMovieIds = new Set()
 
 const showSettings = ref(false)
-const minVoteCount = ref(50)
-const minVoteAverage = ref(0)
 
-const RELAXED_LABELS = { subgenre: 'le sous-genre', country: 'le pays', year: 'la décennie' }
+const FILTER_SETTINGS_KEY = 'movieRoulette.filterSettings'
 
-function joinFr(items) {
-  if (items.length <= 1) return items.join('')
-  return `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`
+function loadFilterSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(FILTER_SETTINGS_KEY)) || {}
+  } catch {
+    return {}
+  }
 }
+
+const savedFilterSettings = loadFilterSettings()
+
+const minVoteCount = ref(savedFilterSettings.minVoteCount ?? 50)
+const minVoteAverage = ref(savedFilterSettings.minVoteAverage ?? 0)
+const voteCountMode = ref(savedFilterSettings.voteCountMode === 'max' ? 'max' : 'min')
+const voteAverageMode = ref(savedFilterSettings.voteAverageMode === 'max' ? 'max' : 'min')
+
+watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode], () => {
+  try {
+    localStorage.setItem(
+      FILTER_SETTINGS_KEY,
+      JSON.stringify({
+        minVoteCount: minVoteCount.value,
+        minVoteAverage: minVoteAverage.value,
+        voteCountMode: voteCountMode.value,
+        voteAverageMode: voteAverageMode.value,
+      }),
+    )
+  } catch {
+    // ignore
+  }
+})
+
+function toggleVoteCountMode() {
+  voteCountMode.value = voteCountMode.value === 'min' ? 'max' : 'min'
+}
+function toggleVoteAverageMode() {
+  voteAverageMode.value = voteAverageMode.value === 'min' ? 'max' : 'min'
+}
+
+const RELAXED_KEYS = { subgenre: 'relaxed.subgenre', country: 'relaxed.country', year: 'relaxed.year' }
 
 async function fetchSuggestions() {
   if (loadingSuggestions.value || rolling.value || !reels.genre.started) return
@@ -270,20 +324,23 @@ async function fetchSuggestions() {
   relaxedCriteria.value = []
   try {
     const { movies, relaxed } = await suggestMovies({
-      genre: reels.genre.strip[reels.genre.strip.length - 1],
-      year: reels.year.strip[reels.year.strip.length - 1],
-      country: reels.country.strip[reels.country.strip.length - 1],
-      subgenre: sub.started ? sub.strip[sub.strip.length - 1] : null,
+      genreId: reels.genre.strip[reels.genre.strip.length - 1],
+      decadeId: reels.year.strip[reels.year.strip.length - 1],
+      countryCode: reels.country.strip[reels.country.strip.length - 1],
+      subgenreId: sub.started ? sub.strip[sub.strip.length - 1] : null,
       excludeIds: seenMovieIds,
       minVoteCount: minVoteCount.value,
       minVoteAverage: minVoteAverage.value,
+      voteCountMode: voteCountMode.value,
+      voteAverageMode: voteAverageMode.value,
+      locale: locale.value,
     })
     suggestions.value = movies
     relaxedCriteria.value = relaxed
     movies.forEach((m) => seenMovieIds.add(m.id))
-    if (suggestions.value.length === 0) suggestError.value = 'Aucun film trouvé pour cette combinaison.'
+    if (suggestions.value.length === 0) suggestError.value = t('suggest.noResults')
   } catch (err) {
-    suggestError.value = err.message || 'Erreur lors de la recherche.'
+    suggestError.value = err.message || t('suggest.error')
   } finally {
     loadingSuggestions.value = false
   }
@@ -296,15 +353,15 @@ async function fetchSuggestions() {
       <button
         class="text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
         @click="muted = !muted"
-        :title="muted ? 'Activer le son' : 'Couper le son'"
+        :title="muted ? t('sound.titleEnable') : t('sound.titleDisable')"
       >
-        {{ muted ? 'Son coupé' : 'Son actif' }}
+        {{ muted ? t('sound.off') : t('sound.on') }}
       </button>
       <button
         class="text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
         @click="showSettings = true"
       >
-        Paramètres
+        {{ t('settings.button') }}
       </button>
     </div>
 
@@ -316,7 +373,7 @@ async function fetchSuggestions() {
     <div class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none text-center">
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
       <h1 class="font-display font-semibold tracking-tight text-3xl sm:text-5xl">Movie Roulette</h1>
-      <p class="text-muted tracking-[0.24em] uppercase text-[0.7rem]">Trouve quoi regarder</p>
+      <p class="text-muted tracking-[0.24em] uppercase text-[0.7rem]">{{ t('tagline') }}</p>
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
     </div>
 
@@ -328,7 +385,7 @@ async function fetchSuggestions() {
           :class="excluded[cat.key].size ? 'text-accent' : 'text-muted hover:text-ink'"
           @click="openFilter(cat.key)"
         >
-          {{ cat.label }}<template v-if="excluded[cat.key].size"> · {{ cat.fullList.length - excluded[cat.key].size }}</template>
+          {{ categoryLabel(cat.key) }}<template v-if="excluded[cat.key].size"> · {{ cat.fullList.length - excluded[cat.key].size }}</template>
         </button>
         <div
           class="w-52 h-52 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
@@ -348,7 +405,7 @@ async function fetchSuggestions() {
               }"
             >
               <div v-for="(item, i) in reels[cat.key].strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-3" :style="{ height: `${cellHeight}px` }">
-                <span class="text-2xl sm:text-3xl font-semibold text-center">{{ item }}</span>
+                <span class="text-2xl sm:text-3xl font-semibold text-center">{{ itemLabel(cat.key, item) }}</span>
               </div>
             </div>
           </div>
@@ -363,7 +420,7 @@ async function fetchSuggestions() {
           :disabled="rolling"
           @click="toggleLock(cat.key)"
         >
-          {{ locked[cat.key] ? 'Verrouillé' : 'Verrouiller' }}
+          {{ locked[cat.key] ? t('lock.locked') : t('lock.lock') }}
         </button>
       </div>
     </div>
@@ -379,7 +436,7 @@ async function fetchSuggestions() {
         :disabled="rolling || allLocked"
         @click="roll"
       >
-        {{ rolling ? 'En cours…' : 'Lancer' }}
+        {{ rolling ? t('rolling') : t('roll') }}
       </button>
 
       <button
@@ -389,7 +446,7 @@ async function fetchSuggestions() {
         :disabled="rollingSub"
         @click="rollSub"
       >
-        {{ rollingSub ? 'En cours…' : sub.started ? 'Relancer le sous-genre' : 'Sous-genre' }}
+        {{ rollingSub ? t('rolling') : sub.started ? t('subgenre.reroll') : t('subgenre.roll') }}
       </button>
 
       <button
@@ -399,12 +456,12 @@ async function fetchSuggestions() {
         :disabled="loadingSuggestions"
         @click="fetchSuggestions"
       >
-        {{ loadingSuggestions ? 'Recherche…' : 'Proposer 3 films' }}
+        {{ loadingSuggestions ? t('suggest.loading') : t('suggest.button') }}
       </button>
     </TransitionGroup>
 
     <div v-if="sub.started" class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none">
-      <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">Sous-genre</span>
+      <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">{{ t('subgenre.label') }}</span>
       <div
         class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 border rounded-lg bg-panel transition-colors duration-300"
         :class="[sub.spinning ? 'border-accent' : 'border-line', sub.landed && 'animate-pop']"
@@ -420,7 +477,7 @@ async function fetchSuggestions() {
             }"
           >
             <div v-for="(item, i) in sub.strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-3" :style="{ height: `${subCellHeight}px` }">
-              <span class="text-lg sm:text-xl font-semibold text-center">{{ item }}</span>
+              <span class="text-lg sm:text-xl font-semibold text-center">{{ subgenreLabel(currentGenreId(), item) }}</span>
             </div>
           </div>
         </div>
@@ -432,13 +489,13 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="showModal" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showModal = false">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showModal = false" aria-label="Fermer">✕</button>
-            <h2 class="font-display font-semibold text-xl text-center mb-5">Suggestions</h2>
-            <p v-if="loadingSuggestions" class="text-center text-muted py-4">Recherche…</p>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showModal = false" :aria-label="t('close')">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-5">{{ t('modal.title') }}</h2>
+            <p v-if="loadingSuggestions" class="text-center text-muted py-4">{{ t('suggest.loading') }}</p>
             <p v-else-if="suggestError" class="text-center text-accent py-4">{{ suggestError }}</p>
             <template v-else>
               <p v-if="relaxedCriteria.length" class="text-center text-muted text-[0.8rem] italic mb-4">
-                Pour trouver des résultats, la recherche a été élargie sur : {{ joinFr(relaxedCriteria.map((c) => RELAXED_LABELS[c])) }}.
+                {{ t('suggest.relaxedIntro', { list: joinList(relaxedCriteria.map((c) => t(RELAXED_KEYS[c]))) }) }}
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <div
@@ -468,7 +525,7 @@ async function fetchSuggestions() {
                   :disabled="loadingSuggestions"
                   @click="fetchSuggestions"
                 >
-                  Autres films
+                  {{ t('suggest.other') }}
                 </button>
               </div>
             </template>
@@ -481,11 +538,11 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="filterKey" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="closeFilter">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="closeFilter" aria-label="Fermer">✕</button>
-            <h2 class="font-display font-semibold text-xl text-center mb-1">Filtrer : {{ activeCategory.label }}</h2>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="closeFilter" :aria-label="t('close')">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-1">{{ t('filter.title', { label: categoryLabel(activeCategory.key) }) }}</h2>
             <p class="text-center text-muted text-xs mb-4">
-              {{ activeCategory.fullList.length - excluded[filterKey].size }} / {{ activeCategory.fullList.length }} sélectionnés
-              <button v-if="excluded[filterKey].size" type="button" class="text-accent hover:underline ml-2" @click="excluded[filterKey].clear()">Tout cocher</button>
+              {{ t('filter.selected', { count: activeCategory.fullList.length - excluded[filterKey].size, total: activeCategory.fullList.length }) }}
+              <button v-if="excluded[filterKey].size" type="button" class="text-accent hover:underline ml-2" @click="excluded[filterKey].clear()">{{ t('filter.checkAll') }}</button>
             </p>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
               <label
@@ -499,7 +556,7 @@ async function fetchSuggestions() {
                   :checked="!excluded[filterKey].has(item)"
                   @change="toggleExclude(filterKey, item, $event)"
                 />
-                <span class="truncate">{{ item }}</span>
+                <span class="truncate">{{ itemLabel(filterKey, item) }}</span>
               </label>
             </div>
           </div>
@@ -511,34 +568,107 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="showSettings" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showSettings = false">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-sm w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showSettings = false" aria-label="Fermer">✕</button>
-            <h2 class="font-display font-semibold text-xl text-center mb-6">Paramètres</h2>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showSettings = false" :aria-label="t('close')">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-6">{{ t('settings.title') }}</h2>
 
             <div class="flex flex-col gap-6">
               <div>
                 <div class="flex items-baseline justify-between mb-1">
-                  <span class="text-sm font-semibold">Popularité minimum</span>
-                  <span class="text-muted text-xs">{{ minVoteCount }} votes</span>
+                  <span class="text-sm font-semibold">{{ t('settings.language') }}</span>
                 </div>
-                <input type="range" min="0" max="500" step="10" v-model.number="minVoteCount" class="w-full accent-accent" />
-                <p class="text-muted text-[0.7rem] mt-1">Nombre minimum de votes reçus sur TMDB. Plus haut = films plus connus.</p>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class="flex-1 text-sm font-semibold rounded-md border px-3 py-2 transition-colors"
+                    :class="locale === 'fr' ? 'bg-accent text-accent-ink border-accent' : 'text-muted border-line hover:text-ink'"
+                    @click="locale = 'fr'"
+                  >
+                    {{ t('lang.fr') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="flex-1 text-sm font-semibold rounded-md border px-3 py-2 transition-colors"
+                    :class="locale === 'en' ? 'bg-accent text-accent-ink border-accent' : 'text-muted border-line hover:text-ink'"
+                    @click="locale = 'en'"
+                  >
+                    {{ t('lang.en') }}
+                  </button>
+                </div>
+                <p class="text-muted text-[0.7rem] mt-1">{{ t('settings.languageDesc') }}</p>
               </div>
 
               <div>
                 <div class="flex items-baseline justify-between mb-1">
-                  <span class="text-sm font-semibold">Note minimum</span>
-                  <span class="text-muted text-xs">{{ minVoteAverage > 0 ? `${minVoteAverage}/10` : 'aucune' }}</span>
+                  <span class="flex items-center gap-1.5 text-sm font-semibold">
+                    {{ voteCountMode === 'max' ? t('settings.maxPopularity') : t('settings.minPopularity') }}
+                    <button
+                      type="button"
+                      class="text-muted hover:text-accent transition-colors"
+                      :title="voteCountMode === 'min' ? t('settings.toggleMax') : t('settings.toggleMin')"
+                      @click="toggleVoteCountMode"
+                    >
+                      <svg
+                        class="w-4 h-4 transition-transform duration-300"
+                        :class="voteCountMode === 'max' && 'rotate-180'"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                        <path d="M16 16h5v5" />
+                      </svg>
+                    </button>
+                  </span>
+                  <span class="text-muted text-xs">{{ t('settings.votes', { count: minVoteCount }) }}</span>
+                </div>
+                <input type="range" min="0" max="500" step="10" v-model.number="minVoteCount" class="w-full accent-accent" />
+                <p class="text-muted text-[0.7rem] mt-1">{{ voteCountMode === 'max' ? t('settings.maxPopularityDesc') : t('settings.minPopularityDesc') }}</p>
+              </div>
+
+              <div>
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="flex items-center gap-1.5 text-sm font-semibold">
+                    {{ voteAverageMode === 'max' ? t('settings.maxRating') : t('settings.minRating') }}
+                    <button
+                      type="button"
+                      class="text-muted hover:text-accent transition-colors"
+                      :title="voteAverageMode === 'min' ? t('settings.toggleMax') : t('settings.toggleMin')"
+                      @click="toggleVoteAverageMode"
+                    >
+                      <svg
+                        class="w-4 h-4 transition-transform duration-300"
+                        :class="voteAverageMode === 'max' && 'rotate-180'"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                        <path d="M16 16h5v5" />
+                      </svg>
+                    </button>
+                  </span>
+                  <span class="text-muted text-xs">{{ minVoteAverage > 0 ? `${minVoteAverage}/10` : t('settings.none') }}</span>
                 </div>
                 <input type="range" min="0" max="10" step="0.5" v-model.number="minVoteAverage" class="w-full accent-accent" />
-                <p class="text-muted text-[0.7rem] mt-1">Note moyenne minimum sur TMDB, sur 10.</p>
+                <p class="text-muted text-[0.7rem] mt-1">{{ voteAverageMode === 'max' ? t('settings.maxRatingDesc') : t('settings.minRatingDesc') }}</p>
               </div>
 
               <button
                 type="button"
                 class="text-accent hover:underline text-xs self-center"
-                @click="minVoteCount = 50; minVoteAverage = 0"
+                @click="minVoteCount = 50; minVoteAverage = 0; voteCountMode = 'min'; voteAverageMode = 'min'"
               >
-                Réinitialiser
+                {{ t('settings.reset') }}
               </button>
             </div>
           </div>
@@ -550,7 +680,7 @@ async function fetchSuggestions() {
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
       <p class="text-muted text-xs">© {{ creationYear }} tristankule</p>
       <p class="text-muted text-[0.65rem] max-w-xs">
-        Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.
+        {{ t('footer.disclaimer') }}
       </p>
       <a
         href="https://github.com/MaegIins/movieRoulette"
@@ -558,7 +688,7 @@ async function fetchSuggestions() {
         rel="noopener noreferrer"
         class="text-accent hover:underline text-xs"
       >
-        Code source
+        {{ t('footer.source') }}
       </a>
     </footer>
   </div>

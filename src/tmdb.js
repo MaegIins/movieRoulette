@@ -1,12 +1,10 @@
 import { GENRES } from './data/genres.js'
-import { COUNTRIES } from './data/countries.js'
+import { t, TMDB_LANGUAGE } from './i18n.js'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 
-const GENRE_IDS = Object.fromEntries(GENRES.map((g) => [g.label, g.tmdbId]))
-const COUNTRY_CODES = Object.fromEntries(COUNTRIES.map((c) => [c.label, c.iso]))
 const SUBGENRE_KEYWORDS = Object.fromEntries(
-  GENRES.flatMap((g) => g.subgenres.map((s) => [s.label, s.tmdbKeyword])),
+  GENRES.flatMap((g) => g.subgenres.map((s) => [s.id, s.tmdbKeyword])),
 )
 
 async function findKeywordId(term) {
@@ -20,8 +18,8 @@ async function findKeywordId(term) {
   return data.results?.[0]?.id ?? null
 }
 
-function decadeRange(yearLabel) {
-  const start = parseInt(yearLabel, 10)
+function decadeRange(startYear) {
+  const start = Number(startYear)
   const end = Math.min(start + 9, new Date().getFullYear())
   return { gte: `${start}-01-01`, lte: `${end}-12-31` }
 }
@@ -36,28 +34,28 @@ function pickRandom(arr, n) {
   return picked
 }
 
-async function discover(params) {
+async function discover(params, language) {
   const apiKey = import.meta.env.VITE_TMDB_API_KEY
   const url = new URL(`${TMDB_BASE}/discover/movie`)
   url.searchParams.set('api_key', apiKey)
-  url.searchParams.set('language', 'fr-FR')
+  url.searchParams.set('language', language)
   url.searchParams.set('include_adult', 'false')
   url.searchParams.set('sort_by', 'popularity.desc')
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.status_message || `Erreur TMDB (${res.status})`)
+    throw new Error(body.status_message || t('tmdb.error', { status: res.status }))
   }
   return res.json()
 }
 
 // discover/movie ne renvoie pas le pays de façon fiable, il faut la fiche détaillée
-async function fetchProductionCountry(id) {
+async function fetchProductionCountry(id, language) {
   const apiKey = import.meta.env.VITE_TMDB_API_KEY
   const url = new URL(`${TMDB_BASE}/movie/${id}`)
   url.searchParams.set('api_key', apiKey)
-  url.searchParams.set('language', 'fr-FR')
+  url.searchParams.set('language', language)
   const res = await fetch(url)
   if (!res.ok) return null
   const data = await res.json()
@@ -65,39 +63,43 @@ async function fetchProductionCountry(id) {
 }
 
 export async function suggestMovies({
-  genre,
-  year,
-  country,
-  subgenre,
+  genreId,
+  decadeId,
+  countryCode,
+  subgenreId,
   excludeIds = new Set(),
   minVoteCount = 50,
   minVoteAverage = 0,
+  voteCountMode = 'min',
+  voteAverageMode = 'min',
+  locale = 'fr',
 }) {
   if (!import.meta.env.VITE_TMDB_API_KEY) {
-    throw new Error('Clé TMDB manquante : crée un fichier .env avec VITE_TMDB_API_KEY (voir .env.example)')
+    throw new Error(t('tmdb.missingKey'))
   }
 
-  const genreId = GENRE_IDS[genre]
-  const countryCode = COUNTRY_CODES[country]
-  const { gte, lte } = decadeRange(year)
+  const language = TMDB_LANGUAGE[locale] || TMDB_LANGUAGE.fr
+  const { gte, lte } = decadeRange(decadeId)
+  const voteCountKey = voteCountMode === 'max' ? 'vote_count.lte' : 'vote_count.gte'
+  const voteAverageKey = voteAverageMode === 'max' ? 'vote_average.lte' : 'vote_average.gte'
   const base = { with_genres: genreId, 'primary_release_date.gte': gte, 'primary_release_date.lte': lte }
-  if (minVoteAverage > 0) base['vote_average.gte'] = minVoteAverage
+  if (minVoteAverage > 0) base[voteAverageKey] = minVoteAverage
 
   let keywordId = null
-  const keywordTerm = subgenre ? SUBGENRE_KEYWORDS[subgenre] : null
+  const keywordTerm = subgenreId ? SUBGENRE_KEYWORDS[subgenreId] : null
   if (keywordTerm) {
     keywordId = await findKeywordId(keywordTerm).catch(() => null)
   }
 
   // chaque palier liste les critères sacrifiés ("relaxed"), du plus strict au plus large
-  const subgenreRelaxed = subgenre ? ['subgenre'] : []
+  const subgenreRelaxed = subgenreId ? ['subgenre'] : []
   const tiers = []
   if (keywordId) {
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, 'vote_count.gte': minVoteCount }, relaxed: [] })
+    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, [voteCountKey]: minVoteCount }, relaxed: [] })
     tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: [] })
     tiers.push({ params: { ...base, with_keywords: keywordId }, relaxed: ['country'] })
   }
-  tiers.push({ params: { ...base, with_origin_country: countryCode, 'vote_count.gte': minVoteCount }, relaxed: subgenreRelaxed })
+  tiers.push({ params: { ...base, with_origin_country: countryCode, [voteCountKey]: minVoteCount }, relaxed: subgenreRelaxed })
   tiers.push({ params: { ...base, with_origin_country: countryCode }, relaxed: subgenreRelaxed })
   tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country'] })
   tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
@@ -105,10 +107,10 @@ export async function suggestMovies({
   for (const tier of tiers) {
     const cleanParams = Object.fromEntries(Object.entries(tier.params).filter(([, v]) => v !== undefined))
     const page = 1 + Math.floor(Math.random() * 3)
-    let data = await discover({ ...cleanParams, page: String(page) })
+    let data = await discover({ ...cleanParams, page: String(page) }, language)
     let pool = data.results || []
     if (pool.length < 5 && page !== 1) {
-      data = await discover({ ...cleanParams, page: '1' })
+      data = await discover({ ...cleanParams, page: '1' }, language)
       pool = [...pool, ...(data.results || [])]
     }
     pool = [...new Map(pool.map((m) => [m.id, m])).values()]
@@ -128,7 +130,7 @@ export async function suggestMovies({
       if (tier.relaxed.includes('country')) {
         await Promise.all(
           movies.map(async (m) => {
-            m.country = await fetchProductionCountry(m.id).catch(() => null)
+            m.country = await fetchProductionCountry(m.id, language).catch(() => null)
           }),
         )
       }
