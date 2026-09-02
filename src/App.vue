@@ -1,15 +1,59 @@
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { suggestMovies } from './tmdb.js'
 import { GENRES } from './data/genres.js'
 import { COUNTRIES } from './data/countries.js'
 import { DECADES } from './data/decades.js'
 
 const CATEGORIES = [
-  { key: 'genre', label: 'Genre', duration: 1100, list: GENRES.map((g) => g.label) },
-  { key: 'year', label: 'Année', duration: 1550, list: DECADES.map((d) => d.label), weights: DECADES.map((d) => d.weight) },
-  { key: 'country', label: 'Pays', duration: 2000, list: COUNTRIES.map((c) => c.label), weights: COUNTRIES.map((c) => c.weight) },
+  { key: 'genre', label: 'Genre', duration: 1100, fullList: GENRES.map((g) => g.label) },
+  { key: 'year', label: 'Année', duration: 1550, fullList: DECADES.map((d) => d.label), fullWeights: DECADES.map((d) => d.weight) },
+  { key: 'country', label: 'Pays', duration: 2000, fullList: COUNTRIES.map((c) => c.label), fullWeights: COUNTRIES.map((c) => c.weight) },
 ]
+
+const excluded = reactive({ genre: new Set(), year: new Set(), country: new Set() })
+const filterKey = ref(null)
+const activeCategory = computed(() => CATEGORIES.find((c) => c.key === filterKey.value))
+
+function openFilter(key) {
+  filterKey.value = key
+}
+function closeFilter() {
+  filterKey.value = null
+}
+function toggleExclude(key, item, event) {
+  const set = excluded[key]
+  if (set.has(item)) {
+    set.delete(item)
+    return
+  }
+  const cat = CATEGORIES.find((c) => c.key === key)
+  if (cat.fullList.length - set.size <= 1) {
+    // rien ne change côté état réactif ici, donc Vue ne remettra pas la checkbox
+    // cochée toute seule : on force la case native à revenir en arrière
+    if (event) event.target.checked = true
+    return
+  }
+  set.add(item)
+}
+function effectivePool(cat) {
+  const ex = excluded[cat.key]
+  if (!ex.size) return { list: cat.fullList, weights: cat.fullWeights }
+  const list = []
+  const weights = cat.fullWeights ? [] : undefined
+  cat.fullList.forEach((item, i) => {
+    if (ex.has(item)) return
+    list.push(item)
+    if (weights) weights.push(cat.fullWeights[i])
+  })
+  return { list, weights }
+}
+
+const locked = reactive({ genre: false, year: false, country: false })
+const allLocked = computed(() => CATEGORIES.every((c) => locked[c.key]))
+function toggleLock(key) {
+  locked[key] = !locked[key]
+}
 
 const reels = reactive(
   Object.fromEntries(
@@ -34,7 +78,9 @@ function updateCellHeight() {
 }
 
 function onKeydown(e) {
-  if (e.key === 'Escape' && showModal.value) showModal.value = false
+  if (e.key !== 'Escape') return
+  if (filterKey.value) filterKey.value = null
+  else if (showModal.value) showModal.value = false
 }
 
 onMounted(() => {
@@ -151,7 +197,7 @@ function checkAllDone() {
 }
 
 function roll() {
-  if (rolling.value) return
+  if (rolling.value || allLocked.value) return
   rolling.value = true
   updateCellHeight()
   sub.started = false
@@ -165,7 +211,11 @@ function roll() {
   seenMovieIds = new Set()
   playThunk()
   startTicking()
-  CATEGORIES.forEach((c) => spinReel(reels[c.key], c.list, c.duration, cellHeight.value, checkAllDone, c.weights))
+  CATEGORIES.forEach((c) => {
+    if (locked[c.key]) return
+    const { list, weights } = effectivePool(c)
+    spinReel(reels[c.key], list, c.duration, cellHeight.value, checkAllDone, weights)
+  })
 }
 
 function currentGenre() {
@@ -250,7 +300,14 @@ async function fetchSuggestions() {
 
     <div class="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-center gap-8 sm:gap-10">
       <div v-for="cat in CATEGORIES" :key="cat.key" class="flex flex-col items-center gap-3">
-        <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">{{ cat.label }}</span>
+        <button
+          type="button"
+          class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] px-2 py-1 -mx-2 -my-1 transition-colors"
+          :class="excluded[cat.key].size ? 'text-accent' : 'text-muted hover:text-ink'"
+          @click="openFilter(cat.key)"
+        >
+          {{ cat.label }}<template v-if="excluded[cat.key].size"> · {{ cat.fullList.length - excluded[cat.key].size }}</template>
+        </button>
         <div
           class="w-52 h-52 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
           :class="reels[cat.key].spinning ? 'border-accent' : 'border-line'"
@@ -274,6 +331,18 @@ async function fetchSuggestions() {
             </div>
           </div>
         </div>
+        <button
+          type="button"
+          class="text-[0.65rem] font-semibold tracking-[0.1em] uppercase transition-colors"
+          :class="[
+            reels[cat.key].started ? 'opacity-100' : 'opacity-0 pointer-events-none',
+            locked[cat.key] ? 'text-accent' : 'text-muted hover:text-ink',
+          ]"
+          :disabled="rolling"
+          @click="toggleLock(cat.key)"
+        >
+          {{ locked[cat.key] ? 'Verrouillé' : 'Verrouiller' }}
+        </button>
       </div>
     </div>
 
@@ -285,7 +354,7 @@ async function fetchSuggestions() {
       <button
         key="roll"
         class="font-semibold tracking-[0.08em] uppercase bg-accent text-accent-ink border border-accent transition duration-150 hover:bg-accent-hover hover:border-accent-hover active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-10 sm:px-14 py-4 sm:py-5 text-base sm:text-lg w-full max-w-xs sm:w-auto"
-        :disabled="rolling"
+        :disabled="rolling || allLocked"
         @click="roll"
       >
         {{ rolling ? 'En cours…' : 'Lancer' }}
@@ -375,6 +444,36 @@ async function fetchSuggestions() {
                 </button>
               </div>
             </template>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="filterKey" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="closeFilter">
+          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="closeFilter" aria-label="Fermer">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-1">Filtrer : {{ activeCategory.label }}</h2>
+            <p class="text-center text-muted text-xs mb-4">
+              {{ activeCategory.fullList.length - excluded[filterKey].size }} / {{ activeCategory.fullList.length }} sélectionnés
+              <button v-if="excluded[filterKey].size" type="button" class="text-accent hover:underline ml-2" @click="excluded[filterKey].clear()">Tout cocher</button>
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1">
+              <label
+                v-for="item in activeCategory.fullList"
+                :key="item"
+                class="flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer hover:bg-panel text-sm"
+              >
+                <input
+                  type="checkbox"
+                  class="accent-accent shrink-0"
+                  :checked="!excluded[filterKey].has(item)"
+                  @change="toggleExclude(filterKey, item, $event)"
+                />
+                <span class="truncate">{{ item }}</span>
+              </label>
+            </div>
           </div>
         </div>
       </Transition>
