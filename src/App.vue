@@ -717,7 +717,10 @@ async function fetchSuggestions() {
 
     <footer class="w-full max-w-xs sm:max-w-none mx-auto flex flex-col items-center gap-2 text-center px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
-      <p class="text-muted text-xs">© {{ creationYear }} tristankule</p>
+      <p class="text-muted text-xs">
+        © {{ creationYear }} tristankule ·
+        <a href="https://letterboxd.com/maeglins/" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">Letterboxd</a>
+      </p>
       <p class="text-muted text-[0.65rem] max-w-xs">
         {{ t('footer.disclaimer') }}
       </p>
