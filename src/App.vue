@@ -5,6 +5,8 @@ import { GENRES } from './data/genres.js'
 import { COUNTRIES } from './data/countries.js'
 import { DECADES } from './data/decades.js'
 
+const creationYear = 2026
+
 const CATEGORIES = [
   { key: 'genre', label: 'Genre', duration: 1100, fullList: GENRES.map((g) => g.label) },
   { key: 'year', label: 'Année', duration: 1550, fullList: DECADES.map((d) => d.label), fullWeights: DECADES.map((d) => d.weight) },
@@ -282,11 +284,7 @@ async function fetchSuggestions() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center gap-10 sm:gap-16 px-4 sm:px-6 py-10 sm:py-16 relative overflow-x-hidden">
-    <!-- mesure la hauteur réelle des cases pour aligner le défilement des rouleaux -->
-    <div ref="probeRef" class="w-52 h-52 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
-    <div ref="subProbeRef" class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
-
+  <div class="min-h-screen flex flex-col relative overflow-x-hidden">
     <button
       class="absolute top-4 right-4 sm:top-6 sm:right-6 text-xs font-semibold tracking-widest uppercase text-muted hover:text-ink transition-colors"
       @click="muted = !muted"
@@ -294,6 +292,11 @@ async function fetchSuggestions() {
     >
       {{ muted ? 'Son coupé' : 'Son actif' }}
     </button>
+
+    <div class="flex-1 flex flex-col items-center justify-center gap-10 sm:gap-16 px-4 sm:px-6 py-10 sm:py-16">
+    <!-- mesure la hauteur réelle des cases pour aligner le défilement des rouleaux -->
+    <div ref="probeRef" class="w-52 h-52 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
+    <div ref="subProbeRef" class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
 
     <div class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none text-center">
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
@@ -408,6 +411,7 @@ async function fetchSuggestions() {
         </div>
       </div>
     </div>
+    </div>
 
     <Teleport to="body">
       <Transition name="modal">
@@ -487,5 +491,21 @@ async function fetchSuggestions() {
         </div>
       </Transition>
     </Teleport>
+
+    <footer class="w-full max-w-xs sm:max-w-none mx-auto flex flex-col items-center gap-2 text-center px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
+      <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
+      <p class="text-muted text-xs">© {{ creationYear }} tristankule</p>
+      <p class="text-muted text-[0.65rem] max-w-xs">
+        Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.
+      </p>
+      <a
+        href="https://github.com/MaegIins/movieRoulette"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-accent hover:underline text-xs"
+      >
+        Code source
+      </a>
+    </footer>
   </div>
 </template>
