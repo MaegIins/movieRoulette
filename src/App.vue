@@ -337,7 +337,7 @@ function toggleVoteAverageMode() {
   voteAverageMode.value = voteAverageMode.value === 'min' ? 'max' : 'min'
 }
 
-const RELAXED_KEYS = { subgenre: 'relaxed.subgenre', country: 'relaxed.country', year: 'relaxed.year' }
+const RELAXED_KEYS = { subgenre: 'relaxed.subgenre', country: 'relaxed.country', year: 'relaxed.year', votes: 'relaxed.votes' }
 
 async function fetchSuggestions() {
   if (loadingSuggestions.value || rolling.value || !reels.genre.started) return
