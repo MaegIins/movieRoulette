@@ -12,14 +12,39 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY
 const PORT = process.env.PORT || 3001
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 
+// origines autorisées à appeler l'API : le site déployé (ALLOWED_ORIGIN) + les ports de dev habituels
+const ALLOWED_ORIGINS = new Set(
+  [process.env.ALLOWED_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean),
+)
+
 if (!TMDB_API_KEY) {
   console.warn('[server] TMDB_API_KEY manquante : les appels TMDB échoueront. Copie .env.example en .env et renseigne la clé.')
+}
+if (!process.env.ALLOWED_ORIGIN) {
+  console.warn('[server] ALLOWED_ORIGIN non défini : seules les origines de dev (localhost:5173) pourront appeler /api/tmdb en dehors du site lui-même une fois déployé.')
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.join(__dirname, '..', 'dist')
 
 const app = express()
+
+// bloque les appels directs (curl, navigation brute...) : un vrai fetch() du front envoie
+// Origin et/ou Referer correspondant au site ; ni curl ni une navigation brute ne les envoient
+function requestOrigin(req) {
+  if (req.headers.origin) return req.headers.origin
+  try {
+    return req.headers.referer ? new URL(req.headers.referer).origin : null
+  } catch {
+    return null
+  }
+}
+
+app.use('/api/tmdb', (req, res, next) => {
+  const origin = requestOrigin(req)
+  if (origin && ALLOWED_ORIGINS.has(origin)) return next()
+  res.status(403).json({ status_message: 'Origine non autorisée.' })
+})
 
 // proxie TMDB en n'exposant jamais la clé API au client : elle est injectée ici, côté serveur
 async function proxyTmdb(res, pathname, extraParams) {

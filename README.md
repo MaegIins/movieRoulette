@@ -24,6 +24,7 @@ Le front ne parle jamais directement à TMDB : un petit serveur (`server/`) prox
    ```
    TMDB_API_KEY=ta_clé_ici
    ```
+3. Une fois déployé, renseigne aussi `ALLOWED_ORIGIN` avec l'URL exacte du site (ex. `https://movie-roulette.exemple.com`, sans slash final) : `/api/tmdb` refuse toute requête dont l'origine ne correspond pas, ce qui bloque les appels directs (`curl`, etc.) qui n'envoient pas ce header. Sans cette variable, seuls les ports de dev locaux sont autorisés.
 
 Sans clé, tout le reste de l'app fonctionne (les rouleaux, le tirage), seul le bouton "Proposer N films" affichera une erreur explicite.
 
