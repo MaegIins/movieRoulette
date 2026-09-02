@@ -9,6 +9,7 @@ Une roulette pour décider quoi regarder. On tire un genre, une décennie et un 
 - **Proposer 3 films** : interroge TMDB avec ces critères. Si la combinaison est trop rare, la recherche s'élargit automatiquement (pays, puis décennie) et le prévient dans la modale.
 - **Autres films** : redemande 3 films en excluant ceux déjà montrés, pour ne pas se répéter.
 - Chaque film proposé pointe vers sa fiche TMDB et Letterboxd.
+- **Paramètres** : langue de l'interface et des résultats TMDB (Français / English), popularité et note minimales (basculables en maximales via l'icône ↻, pour chercher au contraire des films confidentiels ou mal notés). Langue, son coupé, popularité et note sont mémorisés d'une visite à l'autre.
 
 ## Setup
 
@@ -40,10 +41,11 @@ npm run preview   # preview du build
 src/
   App.vue           composant unique : rouleaux, animation, modale
   tmdb.js           appels TMDB (discover, keyword, détail film) + repli progressif des critères
+  i18n.js           locale (fr/en), dictionnaire de traductions, langue TMDB associée
   data/
-    genres.js       19 genres + leurs sous-genres, avec id/mot-clé TMDB associés
-    countries.js     pays + code ISO + poids de tirage
-    decades.js       décennies + poids de tirage
+    genres.js       19 genres + leurs sous-genres, avec id/mot-clé TMDB associés et libellés fr/en
+    countries.js     pays + code ISO + poids de tirage + libellés fr/en
+    decades.js       décennies + poids de tirage + libellés fr/en
 ```
 
 ## Stack

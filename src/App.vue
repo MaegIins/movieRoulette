@@ -87,7 +87,24 @@ const SUB_DURATION = 1300
 
 const rolling = ref(false)
 const rollingSub = ref(false)
-const muted = ref(false)
+
+const MUTED_KEY = 'movieRoulette.muted'
+function loadMuted() {
+  try {
+    return localStorage.getItem(MUTED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+const muted = ref(loadMuted())
+watch(muted, (value) => {
+  try {
+    localStorage.setItem(MUTED_KEY, String(value))
+  } catch {
+    // ignore
+  }
+})
+
 const cellHeight = ref(208)
 const subCellHeight = ref(64)
 const probeRef = ref(null)

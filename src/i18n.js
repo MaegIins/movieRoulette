@@ -14,12 +14,23 @@ function detectInitialLocale() {
 
 export const locale = ref(detectInitialLocale())
 
+function applyDocumentLang(value) {
+  try {
+    document.documentElement.lang = value
+  } catch {
+    // pas d'environnement navigateur (SSR, tests, etc.)
+  }
+}
+
+applyDocumentLang(locale.value)
+
 watch(locale, (value) => {
   try {
     localStorage.setItem(STORAGE_KEY, value)
   } catch {
     // ignore
   }
+  applyDocumentLang(value)
 })
 
 // code langue TMDB correspondant, utilisé pour la recherche et les libellés renvoyés par l'API
