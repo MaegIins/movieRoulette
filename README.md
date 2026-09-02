@@ -17,30 +17,42 @@ Une roulette pour décider quoi regarder. On tire un genre, une décennie et un 
 npm install
 ```
 
-L'app appelle TMDB directement depuis le navigateur, il faut donc une clé API gratuite :
+Le front ne parle jamais directement à TMDB : un petit serveur (`server/`) proxie les appels et porte seul la clé API, qui n'est donc jamais exposée au navigateur.
 
 1. Crée un compte sur [themoviedb.org](https://www.themoviedb.org/) puis génère une clé API (v3 auth) dans *Paramètres → API*.
 2. Copie `.env.example` en `.env` et colle la clé :
    ```
-   VITE_TMDB_API_KEY=ta_clé_ici
+   TMDB_API_KEY=ta_clé_ici
    ```
 
-Sans clé, tout le reste de l'app fonctionne (les rouleaux, le tirage), seul le bouton "Proposer 3 films" affichera une erreur explicite.
+Sans clé, tout le reste de l'app fonctionne (les rouleaux, le tirage), seul le bouton "Proposer N films" affichera une erreur explicite.
 
 ## Commandes
 
+En développement, deux process tournent en parallèle (le proxy Vite fait le lien entre les deux) :
+
 ```bash
-npm run dev       # serveur de dev
-npm run build     # build de prod dans dist/
-npm run preview   # preview du build
+npm run server    # API : proxie TMDB sur http://localhost:3001 (redémarre au changement de fichier)
+npm run dev       # front : serveur de dev Vite sur http://localhost:5173
 ```
+
+Déploiement (ex. sur un VPS) :
+
+```bash
+npm run build     # build de prod dans dist/
+npm start         # un seul process Node : sert dist/ ET l'API, sur $PORT (3001 par défaut)
+```
+
+Place ce process derrière un reverse proxy (nginx, Caddy…) si tu veux du TLS, un nom de domaine, etc.
 
 ## Structure
 
 ```
+server/
+  index.js          serveur Express : proxie TMDB (clé API injectée ici) + sert dist/ en prod
 src/
   App.vue           composant unique : rouleaux, animation, modale
-  tmdb.js           appels TMDB (discover, keyword, détail film) + repli progressif des critères
+  tmdb.js           appelle l'API du serveur (jamais TMDB directement) + repli progressif des critères
   i18n.js           locale (fr/en), dictionnaire de traductions, langue TMDB associée
   data/
     genres.js       19 genres + leurs sous-genres, avec id/mot-clé TMDB associés et libellés fr/en
@@ -50,4 +62,4 @@ src/
 
 ## Stack
 
-Vue 3, Vite, Tailwind CSS v4. Pas de backend — tout tourne côté client, TMDB est appelé directement depuis le navigateur.
+Vue 3, Vite, Tailwind CSS v4 côté front ; Express côté serveur (proxy TMDB + fichiers statiques en prod).

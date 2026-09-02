@@ -92,7 +92,6 @@ const MESSAGES = {
     'lang.en': 'Anglais',
     'footer.disclaimer': "Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.",
     'footer.source': 'Code source',
-    'tmdb.missingKey': 'Clé TMDB manquante : crée un fichier .env avec VITE_TMDB_API_KEY (voir .env.example)',
     'tmdb.error': 'Erreur TMDB ({status})',
   },
   en: {
@@ -150,7 +149,6 @@ const MESSAGES = {
     'lang.en': 'English',
     'footer.disclaimer': 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
     'footer.source': 'Source code',
-    'tmdb.missingKey': 'Missing TMDB key: create a .env file with VITE_TMDB_API_KEY (see .env.example)',
     'tmdb.error': 'TMDB error ({status})',
   },
 }

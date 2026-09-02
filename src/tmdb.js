@@ -1,16 +1,15 @@
 import { GENRES } from './data/genres.js'
 import { t, TMDB_LANGUAGE } from './i18n.js'
 
-const TMDB_BASE = 'https://api.themoviedb.org/3'
+// le serveur (server/index.js) proxie TMDB et y injecte la clé API : le client ne la voit jamais
+const API_BASE = '/api/tmdb'
 
 const SUBGENRE_KEYWORDS = Object.fromEntries(
   GENRES.flatMap((g) => g.subgenres.map((s) => [s.id, s.tmdbKeyword])),
 )
 
 async function findKeywordId(term) {
-  const apiKey = import.meta.env.VITE_TMDB_API_KEY
-  const url = new URL(`${TMDB_BASE}/search/keyword`)
-  url.searchParams.set('api_key', apiKey)
+  const url = new URL(`${API_BASE}/keyword`, window.location.origin)
   url.searchParams.set('query', term)
   const res = await fetch(url)
   if (!res.ok) return null
@@ -35,12 +34,8 @@ function pickRandom(arr, n) {
 }
 
 async function discover(params, language) {
-  const apiKey = import.meta.env.VITE_TMDB_API_KEY
-  const url = new URL(`${TMDB_BASE}/discover/movie`)
-  url.searchParams.set('api_key', apiKey)
+  const url = new URL(`${API_BASE}/discover`, window.location.origin)
   url.searchParams.set('language', language)
-  url.searchParams.set('include_adult', 'false')
-  url.searchParams.set('sort_by', 'popularity.desc')
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
   const res = await fetch(url)
   if (!res.ok) {
@@ -52,9 +47,7 @@ async function discover(params, language) {
 
 // discover/movie ne renvoie pas le pays de façon fiable, il faut la fiche détaillée
 async function fetchProductionCountry(id, language) {
-  const apiKey = import.meta.env.VITE_TMDB_API_KEY
-  const url = new URL(`${TMDB_BASE}/movie/${id}`)
-  url.searchParams.set('api_key', apiKey)
+  const url = new URL(`${API_BASE}/movie/${id}`, window.location.origin)
   url.searchParams.set('language', language)
   const res = await fetch(url)
   if (!res.ok) return null
@@ -75,10 +68,6 @@ export async function suggestMovies({
   count = 3,
   locale = 'fr',
 }) {
-  if (!import.meta.env.VITE_TMDB_API_KEY) {
-    throw new Error(t('tmdb.missingKey'))
-  }
-
   const language = TMDB_LANGUAGE[locale] || TMDB_LANGUAGE.fr
   const { gte, lte } = decadeRange(decadeId)
   const voteCountKey = voteCountMode === 'max' ? 'vote_count.lte' : 'vote_count.gte'
