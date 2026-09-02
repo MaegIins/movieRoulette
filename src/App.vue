@@ -57,11 +57,11 @@ function toggleLock(key) {
 
 const reels = reactive(
   Object.fromEntries(
-    CATEGORIES.map((c) => [c.key, { strip: [c.label], translate: 0, transitionMs: 0, spinning: false, started: false }]),
+    CATEGORIES.map((c) => [c.key, { strip: [c.label], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false }]),
   ),
 )
 
-const sub = reactive({ strip: ['Sous-genre'], translate: 0, transitionMs: 0, spinning: false, started: false })
+const sub = reactive({ strip: ['Sous-genre'], translate: 0, transitionMs: 0, spinning: false, started: false, landed: false })
 const SUB_DURATION = 1300
 
 const rolling = ref(false)
@@ -182,7 +182,11 @@ function spinReel(reel, list, durationMs, heightPx, onDone, weights) {
 
   setTimeout(() => {
     reel.spinning = false
+    reel.landed = true
     playLand()
+    setTimeout(() => {
+      reel.landed = false
+    }, 350)
     onDone?.()
   }, durationMs + 20)
 }
@@ -310,7 +314,7 @@ async function fetchSuggestions() {
         </button>
         <div
           class="w-52 h-52 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
-          :class="reels[cat.key].spinning ? 'border-accent' : 'border-line'"
+          :class="[reels[cat.key].spinning ? 'border-accent' : 'border-line', reels[cat.key].landed && 'animate-pop']"
         >
           <div v-if="!reels[cat.key].started" class="w-full h-full flex items-center justify-center">
             <span class="text-2xl sm:text-3xl font-medium text-muted">—</span>
@@ -353,7 +357,7 @@ async function fetchSuggestions() {
     >
       <button
         key="roll"
-        class="font-semibold tracking-[0.08em] uppercase bg-accent text-accent-ink border border-accent transition duration-150 hover:bg-accent-hover hover:border-accent-hover active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-10 sm:px-14 py-4 sm:py-5 text-base sm:text-lg w-full max-w-xs sm:w-auto"
+        class="font-semibold tracking-[0.08em] uppercase bg-accent text-accent-ink border border-accent transition duration-150 hover:bg-accent-hover hover:border-accent-hover hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-10 sm:px-14 py-4 sm:py-5 text-base sm:text-lg w-full max-w-xs sm:w-auto"
         :disabled="rolling || allLocked"
         @click="roll"
       >
@@ -363,7 +367,7 @@ async function fetchSuggestions() {
       <button
         v-if="reels.genre.started && !rolling"
         key="subgenre"
-        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
+        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
         :disabled="rollingSub"
         @click="rollSub"
       >
@@ -373,7 +377,7 @@ async function fetchSuggestions() {
       <button
         v-if="reels.genre.started && !rolling"
         key="suggest"
-        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
+        class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-8 py-3 text-sm w-full max-w-72 sm:w-auto"
         :disabled="loadingSuggestions"
         @click="fetchSuggestions"
       >
@@ -385,7 +389,7 @@ async function fetchSuggestions() {
       <span class="font-semibold tracking-[0.16em] uppercase text-[0.7rem] text-muted">Sous-genre</span>
       <div
         class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 border rounded-lg bg-panel transition-colors duration-300"
-        :class="sub.spinning ? 'border-accent' : 'border-line'"
+        :class="[sub.spinning ? 'border-accent' : 'border-line', sub.landed && 'animate-pop']"
       >
         <div class="overflow-hidden h-full rounded-md">
           <div
@@ -418,7 +422,12 @@ async function fetchSuggestions() {
                 Pour trouver des résultats, la recherche a été élargie sur : {{ joinFr(relaxedCriteria.map((c) => RELAXED_LABELS[c])) }}.
               </p>
               <div class="flex flex-wrap justify-center gap-4">
-                <div v-for="m in suggestions" :key="m.id" class="w-40 border border-line rounded-lg bg-panel overflow-hidden">
+                <div
+                  v-for="(m, i) in suggestions"
+                  :key="m.id"
+                  class="w-40 border border-line rounded-lg bg-panel overflow-hidden animate-fade-up"
+                  :style="{ animationDelay: `${i * 80}ms` }"
+                >
                   <a :href="m.tmdbUrl" target="_blank" rel="noopener noreferrer">
                     <img v-if="m.posterUrl" :src="m.posterUrl" :alt="m.title" class="w-full aspect-[2/3] object-cover block bg-line transition-opacity hover:opacity-85" />
                     <div v-else class="w-full aspect-[2/3] flex items-center justify-center bg-line text-muted transition-opacity hover:opacity-85">—</div>
@@ -436,7 +445,7 @@ async function fetchSuggestions() {
               </div>
               <div class="flex justify-center mt-5">
                 <button
-                  class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-6 py-2 text-xs"
+                  class="font-semibold tracking-[0.08em] uppercase bg-transparent text-accent border border-accent transition duration-150 hover:bg-accent hover:text-accent-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-6 py-2 text-xs"
                   :disabled="loadingSuggestions"
                   @click="fetchSuggestions"
                 >
