@@ -6,7 +6,7 @@ export const DECADES = [
   { id: 1940, weight: 1, labels: { fr: 'Années 1940', en: '1940s' } },
   { id: 1950, weight: 1, labels: { fr: 'Années 1950', en: '1950s' } },
   { id: 1960, weight: 1, labels: { fr: 'Années 1960', en: '1960s' } },
-  { id: 1970, weight: 2, labels: { fr: 'Années 1970', en: '1970s' } },
+  { id: 1970, weight: 1, labels: { fr: 'Années 1970', en: '1970s' } },
   { id: 1980, weight: 2, labels: { fr: 'Années 1980', en: '1980s' } },
   { id: 1990, weight: 2, labels: { fr: 'Années 1990', en: '1990s' } },
   { id: 2000, weight: 2, labels: { fr: 'Années 2000', en: '2000s' } },

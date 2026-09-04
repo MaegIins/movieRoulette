@@ -92,18 +92,24 @@ export async function suggestMovies({
     keywordId = await findKeywordId(keywordTerm).catch(() => null)
   }
 
-  // chaque palier liste les critères sacrifiés ("relaxed"), du plus strict au plus large
+  // chaque palier liste les critères sacrifiés ("relaxed"), du plus strict au plus large ;
+  // le filtre de votes (choisi explicitement dans les Paramètres) n'est sacrifié qu'en tout
+  // dernier recours, jamais silencieusement en même temps que le pays ou la décennie
   const subgenreRelaxed = subgenreId ? ['subgenre'] : []
+  const voteFilter = { [voteCountKey]: minVoteCount }
   const tiers = []
   if (keywordId) {
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, [voteCountKey]: minVoteCount }, relaxed: [] })
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: [] })
-    tiers.push({ params: { ...base, with_keywords: keywordId }, relaxed: ['country'] })
+    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, ...voteFilter }, relaxed: [] })
+    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: ['votes'] })
+    tiers.push({ params: { ...base, with_keywords: keywordId, ...voteFilter }, relaxed: ['country'] })
+    tiers.push({ params: { ...base, with_keywords: keywordId }, relaxed: ['country', 'votes'] })
   }
-  tiers.push({ params: { ...base, with_origin_country: countryCode, [voteCountKey]: minVoteCount }, relaxed: subgenreRelaxed })
-  tiers.push({ params: { ...base, with_origin_country: countryCode }, relaxed: subgenreRelaxed })
-  tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country'] })
-  tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
+  tiers.push({ params: { ...base, with_origin_country: countryCode, ...voteFilter }, relaxed: subgenreRelaxed })
+  tiers.push({ params: { ...base, with_origin_country: countryCode }, relaxed: [...subgenreRelaxed, 'votes'] })
+  tiers.push({ params: { ...base, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country'] })
+  tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country', 'votes'] })
+  tiers.push({ params: { with_genres: genreId, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
+  tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year', 'votes'] })
 
   for (let i = 0; i < tiers.length; i++) {
     const tier = tiers[i]
