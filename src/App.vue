@@ -390,9 +390,9 @@ async function fetchSuggestions() {
       </button>
     </div>
 
-    <div class="flex-1 flex flex-col items-center justify-center gap-10 sm:gap-16 px-4 sm:px-6 py-10 sm:py-16">
+    <div class="flex-1 flex flex-col items-center justify-start sm:justify-center gap-10 sm:gap-16 px-2 sm:px-6 py-10 sm:py-16">
     <!-- mesure la hauteur réelle des cases pour aligner le défilement des rouleaux -->
-    <div ref="probeRef" class="w-52 h-52 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
+    <div ref="probeRef" class="w-28 h-36 sm:w-64 sm:h-64 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
     <div ref="subProbeRef" class="w-full max-w-72 h-16 sm:max-w-96 sm:h-20 absolute opacity-0 pointer-events-none -z-10 border border-line rounded-lg bg-panel" aria-hidden="true"></div>
 
     <div class="flex flex-col items-center gap-3 w-full max-w-xs sm:max-w-none text-center">
@@ -402,26 +402,26 @@ async function fetchSuggestions() {
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
     </div>
 
-    <div class="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-center gap-8 sm:gap-10">
-      <div v-for="cat in CATEGORIES" :key="cat.key" class="flex flex-col items-center gap-3">
+    <div class="flex flex-row flex-wrap items-start justify-center gap-1 sm:gap-10">
+      <div v-for="cat in CATEGORIES" :key="cat.key" class="flex flex-col items-center gap-2 sm:gap-3 w-28 sm:w-auto">
         <button
           type="button"
-          class="flex items-center gap-1 font-semibold tracking-[0.16em] uppercase text-[0.7rem] px-2 py-1 -mx-2 -my-1 border-b border-dotted border-current/45 hover:border-current/80 active:border-current active:text-ink cursor-pointer transition-colors"
+          class="flex items-center gap-1 font-semibold tracking-[0.1em] sm:tracking-[0.16em] uppercase text-[0.65rem] sm:text-[0.7rem] px-2 py-1 -mx-2 -my-1 border-b border-dotted border-current/45 hover:border-current/80 active:border-current active:text-ink cursor-pointer transition-colors text-center leading-tight"
           :class="excluded[cat.key].size ? 'text-accent' : 'text-muted hover:text-ink'"
           :title="t('filter.hint')"
           @click="openFilter(cat.key)"
         >
-          <svg class="w-2.5 h-2.5 opacity-70 sm:hidden" viewBox="0 0 24 24" fill="currentColor">
+          <svg class="w-2.5 h-2.5 opacity-70 sm:hidden shrink-0" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           {{ categoryLabel(cat.key) }}<template v-if="excluded[cat.key].size"> · {{ cat.fullList.length - excluded[cat.key].size }}</template>
         </button>
         <div
-          class="w-52 h-52 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
+          class="w-28 h-36 sm:w-64 sm:h-64 border rounded-lg bg-panel transition-colors duration-300"
           :class="[reels[cat.key].spinning ? 'border-accent' : 'border-line', reels[cat.key].landed && 'animate-pop']"
         >
           <div v-if="!reels[cat.key].started" class="w-full h-full flex items-center justify-center">
-            <span class="text-2xl sm:text-3xl font-medium text-muted">—</span>
+            <span class="text-xl sm:text-3xl font-medium text-muted">—</span>
           </div>
           <div v-else class="overflow-hidden h-full rounded-md">
             <div
@@ -433,15 +433,15 @@ async function fetchSuggestions() {
                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
               }"
             >
-              <div v-for="(item, i) in reels[cat.key].strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-3" :style="{ height: `${cellHeight}px` }">
-                <span class="text-2xl sm:text-3xl font-semibold text-center">{{ itemLabel(cat.key, item) }}</span>
+              <div v-for="(item, i) in reels[cat.key].strip" :key="i" class="flex items-center justify-center shrink-0 text-center px-2 sm:px-3" :style="{ height: `${cellHeight}px` }">
+                <span class="text-base leading-snug break-words min-w-0 sm:text-3xl sm:leading-normal font-semibold text-center">{{ itemLabel(cat.key, item) }}</span>
               </div>
             </div>
           </div>
         </div>
         <button
           type="button"
-          class="text-[0.65rem] font-semibold tracking-[0.1em] uppercase transition-colors"
+          class="text-[0.6rem] sm:text-[0.65rem] font-semibold tracking-[0.1em] uppercase transition-colors text-center leading-tight"
           :class="[
             reels[cat.key].started ? 'opacity-100' : 'opacity-0 pointer-events-none',
             locked[cat.key] ? 'text-accent' : 'text-muted hover:text-ink',
