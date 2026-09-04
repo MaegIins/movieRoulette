@@ -2,6 +2,10 @@
 
 Une roulette pour décider quoi regarder. On tire un genre, une décennie et un pays, en option un sous-genre plus précis, puis l'app va chercher trois films correspondants sur TMDB.
 
+Deux variantes existent :
+- **`main`** (cette branche) : back+front, la clé TMDB reste côté serveur — voir ci-dessous.
+- **[`front-only`](../../tree/front-only)** : front seul, sans serveur à déployer, mais la clé TMDB est visible dans le navigateur — voir [Version front-only](#version-front-only).
+
 ## Fonctionnement
 
 - **Genre / Année / Pays** : trois rouleaux tirés en même temps. Décennies récentes et grands pays producteurs sont un peu favorisés, mais tout reste possible.
@@ -67,3 +71,28 @@ src/
 ## Stack
 
 Vue 3, Vite, Tailwind CSS v4 côté front ; Express côté serveur (proxy TMDB + fichiers statiques en prod).
+
+## Version front-only
+
+Sur la branche `front-only`, le front appelle TMDB directement depuis le navigateur — pas de serveur à installer ni à déployer, mais la clé API est visible dans le code livré au navigateur (onglet réseau, bundle JS). À réserver à un usage perso/local, ou à un hébergement statique où l'exposition de la clé n'est pas un problème.
+
+```bash
+git clone git@github.com:MaegIins/movieRoulette.git
+cd movieRoulette
+git checkout front-only
+npm install
+```
+
+1. Crée un compte sur [themoviedb.org](https://www.themoviedb.org/) puis génère une clé API (v3 auth) dans *Paramètres → API*.
+2. Copie `.env.example` en `.env` et colle la clé :
+   ```
+   VITE_TMDB_API_KEY=ta_clé_ici
+   ```
+3. Lance l'app :
+   ```bash
+   npm run dev       # serveur de dev
+   npm run build     # build de prod dans dist/
+   npm run preview   # preview du build
+   ```
+
+`dist/` est un dossier 100 % statique une fois buildé : il peut être déposé tel quel sur n'importe quel hébergeur statique (GitHub Pages, Netlify, Vercel, etc.), sans process Node à faire tourner.
