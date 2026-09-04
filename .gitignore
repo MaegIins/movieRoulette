@@ -17,3 +17,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Données serveur (compteur de visites, etc.)
+server/data/

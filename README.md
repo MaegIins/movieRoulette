@@ -10,6 +10,7 @@ Une roulette pour décider quoi regarder. On tire un genre, une décennie et un 
 - **Autres films** : redemande 3 films en excluant ceux déjà montrés, pour ne pas se répéter.
 - Chaque film proposé pointe vers sa fiche TMDB et Letterboxd.
 - **Paramètres** : langue de l'interface et des résultats TMDB (Français / English), popularité et note minimales (basculables en maximales via l'icône ↻, pour chercher au contraire des films confidentiels ou mal notés). Langue, son coupé, popularité et note sont mémorisés d'une visite à l'autre.
+- **`/visites`** : compteur de visites (une par chargement de page), persisté côté serveur dans `server/data/`.
 
 ## Setup
 
@@ -51,6 +52,8 @@ Place ce process derrière un reverse proxy (nginx, Caddy…) si tu veux du TLS,
 ```
 server/
   index.js          serveur Express : proxie TMDB (clé API injectée ici) + sert dist/ en prod
+  visites.html       page statique du compteur de visites (/visites)
+  data/               compteur de visites persisté (non versionné)
 src/
   App.vue           composant unique : rouleaux, animation, modale
   tmdb.js           appelle l'API du serveur (jamais TMDB directement) + repli progressif des critères

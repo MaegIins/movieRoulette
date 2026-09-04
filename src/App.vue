@@ -131,6 +131,7 @@ onMounted(() => {
   updateCellHeight()
   window.addEventListener('resize', updateCellHeight)
   window.addEventListener('keydown', onKeydown)
+  fetch('/api/visits', { method: 'POST' }).catch(() => {})
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateCellHeight)

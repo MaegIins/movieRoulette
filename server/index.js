@@ -1,5 +1,6 @@
 import express from 'express'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 try {
@@ -26,6 +27,19 @@ if (!process.env.ALLOWED_ORIGIN) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.join(__dirname, '..', 'dist')
+const visitsFile = path.join(__dirname, 'data', 'visits.json')
+
+function readVisitCount() {
+  try {
+    return JSON.parse(fs.readFileSync(visitsFile, 'utf-8')).count || 0
+  } catch {
+    return 0
+  }
+}
+function writeVisitCount(count) {
+  fs.mkdirSync(path.dirname(visitsFile), { recursive: true })
+  fs.writeFileSync(visitsFile, JSON.stringify({ count }))
+}
 
 const app = express()
 
@@ -45,6 +59,29 @@ app.use('/api/tmdb', (req, res, next) => {
   if (origin && ALLOWED_ORIGINS.has(origin)) return next()
   res.status(403).json({ status_message: 'Origine non autorisée.' })
 })
+
+app.get('/api/visits', (req, res) => {
+  res.json({ count: readVisitCount() })
+})
+
+app.post('/api/visits', (req, res) => {
+  const origin = requestOrigin(req)
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    res.status(403).json({ status_message: 'Origine non autorisée.' })
+    return
+  }
+  const count = readVisitCount() + 1
+  writeVisitCount(count)
+  res.json({ count })
+})
+
+app.get('/visites', (req, res) => {
+  res.sendFile(path.join(__dirname, 'visites.html'))
+})
+
+// chemin stable pour l'icône, utilisée par visites.html qui n'est pas servi par Vite
+// (dans dist/, elle est hashée par le build, donc son chemin change à chaque build)
+app.use('/icon', express.static(path.join(__dirname, '..', 'src', 'icon')))
 
 // proxie TMDB en n'exposant jamais la clé API au client : elle est injectée ici, côté serveur
 async function proxyTmdb(res, pathname, extraParams) {

@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       // en dev, le front (ce serveur Vite) et l'API (server/index.js) tournent en parallèle
       '/api': 'http://localhost:3001',
+      '/visites': 'http://localhost:3001',
     },
   },
 })
