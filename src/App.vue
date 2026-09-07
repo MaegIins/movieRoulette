@@ -313,8 +313,11 @@ const minVoteAverage = ref(savedFilterSettings.minVoteAverage ?? 0)
 const voteCountMode = ref(savedFilterSettings.voteCountMode === 'max' ? 'max' : 'min')
 const voteAverageMode = ref(savedFilterSettings.voteAverageMode === 'max' ? 'max' : 'min')
 const movieCount = ref(savedFilterSettings.movieCount ?? 3)
+const includeShort = ref(savedFilterSettings.includeShort ?? true)
+const includeLong = ref(savedFilterSettings.includeLong ?? true)
+const strictResults = ref(savedFilterSettings.strictResults ?? false)
 
-watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode, movieCount], () => {
+watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode, movieCount, includeShort, includeLong, strictResults], () => {
   try {
     localStorage.setItem(
       FILTER_SETTINGS_KEY,
@@ -324,6 +327,9 @@ watch([minVoteCount, minVoteAverage, voteCountMode, voteAverageMode, movieCount]
         voteCountMode: voteCountMode.value,
         voteAverageMode: voteAverageMode.value,
         movieCount: movieCount.value,
+        includeShort: includeShort.value,
+        includeLong: includeLong.value,
+        strictResults: strictResults.value,
       }),
     )
   } catch {
@@ -337,8 +343,21 @@ function toggleVoteCountMode() {
 function toggleVoteAverageMode() {
   voteAverageMode.value = voteAverageMode.value === 'min' ? 'max' : 'min'
 }
+function toggleLength(kind) {
+  const self = kind === 'short' ? includeShort : includeLong
+  const other = kind === 'short' ? includeLong : includeShort
+  // on garde toujours au moins un type coché, sinon plus rien ne peut être proposé
+  if (self.value && !other.value) return
+  self.value = !self.value
+}
 
-const RELAXED_KEYS = { subgenre: 'relaxed.subgenre', country: 'relaxed.country', year: 'relaxed.year', votes: 'relaxed.votes' }
+const RELAXED_KEYS = {
+  subgenre: 'relaxed.subgenre',
+  country: 'relaxed.country',
+  year: 'relaxed.year',
+  votes: 'relaxed.votes',
+  duration: 'relaxed.duration',
+}
 
 async function fetchSuggestions() {
   if (loadingSuggestions.value || rolling.value || !reels.genre.started) return
@@ -360,6 +379,9 @@ async function fetchSuggestions() {
       voteAverageMode: voteAverageMode.value,
       count: movieCount.value,
       locale: locale.value,
+      includeShort: includeShort.value,
+      includeLong: includeLong.value,
+      strict: strictResults.value,
     })
     suggestions.value = movies
     relaxedCriteria.value = relaxed
@@ -630,6 +652,31 @@ async function fetchSuggestions() {
 
               <div>
                 <div class="flex items-baseline justify-between mb-1">
+                  <span class="text-sm font-semibold">{{ t('settings.length') }}</span>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class="flex-1 text-sm font-semibold rounded-md border px-3 py-2 transition-colors"
+                    :class="includeShort ? 'bg-accent text-accent-ink border-accent' : 'text-muted border-line hover:text-ink'"
+                    @click="toggleLength('short')"
+                  >
+                    {{ t('length.short') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="flex-1 text-sm font-semibold rounded-md border px-3 py-2 transition-colors"
+                    :class="includeLong ? 'bg-accent text-accent-ink border-accent' : 'text-muted border-line hover:text-ink'"
+                    @click="toggleLength('long')"
+                  >
+                    {{ t('length.long') }}
+                  </button>
+                </div>
+                <p class="text-muted text-[0.7rem] mt-1">{{ t('settings.lengthDesc') }}</p>
+              </div>
+
+              <div>
+                <div class="flex items-baseline justify-between mb-1">
                   <span class="flex items-center gap-1.5 text-sm font-semibold">
                     {{ voteCountMode === 'max' ? t('settings.maxPopularity') : t('settings.minPopularity') }}
                     <button
@@ -703,10 +750,18 @@ async function fetchSuggestions() {
                 <p class="text-muted text-[0.7rem] mt-1">{{ t('settings.movieCountDesc') }}</p>
               </div>
 
+              <div>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="accent-accent shrink-0" v-model="strictResults" />
+                  <span class="text-sm font-semibold">{{ t('settings.strict') }}</span>
+                </label>
+                <p class="text-muted text-[0.7rem] mt-1">{{ t('settings.strictDesc') }}</p>
+              </div>
+
               <button
                 type="button"
                 class="text-accent hover:underline text-xs self-center"
-                @click="minVoteCount = 50; minVoteAverage = 0; voteCountMode = 'min'; voteAverageMode = 'min'; movieCount = 3"
+                @click="minVoteCount = 50; minVoteAverage = 0; voteCountMode = 'min'; voteAverageMode = 'min'; movieCount = 3; includeShort = true; includeLong = true; strictResults = false"
               >
                 {{ t('settings.reset') }}
               </button>

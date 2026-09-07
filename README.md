@@ -10,10 +10,10 @@ Deux variantes existent :
 
 - **Genre / Année / Pays** : trois rouleaux tirés en même temps. Décennies récentes et grands pays producteurs sont un peu favorisés, mais tout reste possible.
 - **Sous-genre** : une fois le genre connu, un deuxième tirage propose une variante plus précise (ex. Horreur → Found footage).
-- **Proposer 3 films** : interroge TMDB avec ces critères. Si la combinaison est trop rare, la recherche s'élargit automatiquement (pays, puis décennie) et le prévient dans la modale.
+- **Proposer 3 films** : interroge TMDB avec ces critères. Si la combinaison est trop rare, la recherche s'élargit automatiquement (votes, pays, durée, puis décennie) et le prévient dans la modale — sauf en mode "Résultats stricts" (voir Paramètres), qui affiche moins de films (voire aucun) plutôt que d'assouplir les critères.
 - **Autres films** : redemande 3 films en excluant ceux déjà montrés, pour ne pas se répéter.
 - Chaque film proposé pointe vers sa fiche TMDB et Letterboxd.
-- **Paramètres** : langue de l'interface et des résultats TMDB (Français / English), popularité et note minimales (basculables en maximales via l'icône ↻, pour chercher au contraire des films confidentiels ou mal notés). Langue, son coupé, popularité et note sont mémorisés d'une visite à l'autre.
+- **Paramètres** : langue de l'interface et des résultats TMDB (Français / English), durée des films (court et/ou long métrage, seuil officiel CNC à 60 min, cochables ensemble ou séparément), popularité et note minimales (basculables en maximales via l'icône ↻, pour chercher au contraire des films confidentiels ou mal notés), nombre de films suggérés, et un mode "Résultats stricts" qui désactive l'élargissement automatique. Tous ces réglages ainsi que la langue et le son coupé sont mémorisés d'une visite à l'autre.
 - **`/visites`** : compteur de visites (une par chargement de page), persisté côté serveur dans `server/data/`.
 
 ## Setup

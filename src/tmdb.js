@@ -67,6 +67,9 @@ export async function suggestMovies({
   voteAverageMode = 'min',
   count = 3,
   locale = 'fr',
+  includeShort = true,
+  includeLong = true,
+  strict = false,
 }) {
   const language = TMDB_LANGUAGE[locale] || TMDB_LANGUAGE.fr
   const { gte, lte } = decadeRange(decadeId)
@@ -74,6 +77,19 @@ export async function suggestMovies({
   const voteAverageKey = voteAverageMode === 'max' ? 'vote_average.lte' : 'vote_average.gte'
   const base = { with_genres: genreId, 'primary_release_date.gte': gte, 'primary_release_date.lte': lte }
   if (minVoteAverage > 0) base[voteAverageKey] = minVoteAverage
+
+  // seuil officiel CNC court/long métrage (60 min), les deux cases cochées = pas de filtre ;
+  // gte=1 exclut les fiches à durée inconnue (runtime=0 sur TMDB), qui sinon passeraient pour des courts métrages
+  const runtimeFilter = {}
+  if (includeShort && !includeLong) {
+    runtimeFilter['with_runtime.gte'] = 1
+    runtimeFilter['with_runtime.lte'] = 59
+  } else if (!includeShort && includeLong) {
+    runtimeFilter['with_runtime.gte'] = 60
+  }
+  const hasDurationFilter = Object.keys(runtimeFilter).length > 0
+  const durationRelaxed = hasDurationFilter ? ['duration'] : []
+  const baseWithDuration = { ...base, ...runtimeFilter }
 
   let keywordId = null
   const keywordTerm = subgenreId ? SUBGENRE_KEYWORDS[subgenreId] : null
@@ -88,21 +104,25 @@ export async function suggestMovies({
   const voteFilter = { [voteCountKey]: minVoteCount }
   const tiers = []
   if (keywordId) {
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId, ...voteFilter }, relaxed: [] })
-    tiers.push({ params: { ...base, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: ['votes'] })
-    tiers.push({ params: { ...base, with_keywords: keywordId, ...voteFilter }, relaxed: ['country'] })
-    tiers.push({ params: { ...base, with_keywords: keywordId }, relaxed: ['country', 'votes'] })
+    tiers.push({ params: { ...baseWithDuration, with_origin_country: countryCode, with_keywords: keywordId, ...voteFilter }, relaxed: [] })
+    tiers.push({ params: { ...baseWithDuration, with_origin_country: countryCode, with_keywords: keywordId }, relaxed: ['votes'] })
+    tiers.push({ params: { ...baseWithDuration, with_keywords: keywordId, ...voteFilter }, relaxed: ['country'] })
+    tiers.push({ params: { ...baseWithDuration, with_keywords: keywordId }, relaxed: ['country', 'votes'] })
   }
-  tiers.push({ params: { ...base, with_origin_country: countryCode, ...voteFilter }, relaxed: subgenreRelaxed })
-  tiers.push({ params: { ...base, with_origin_country: countryCode }, relaxed: [...subgenreRelaxed, 'votes'] })
-  tiers.push({ params: { ...base, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country'] })
-  tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country', 'votes'] })
-  tiers.push({ params: { with_genres: genreId, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country', 'year'] })
-  tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year', 'votes'] })
+  tiers.push({ params: { ...baseWithDuration, with_origin_country: countryCode, ...voteFilter }, relaxed: subgenreRelaxed })
+  tiers.push({ params: { ...baseWithDuration, with_origin_country: countryCode }, relaxed: [...subgenreRelaxed, 'votes'] })
+  tiers.push({ params: { ...baseWithDuration, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country'] })
+  tiers.push({ params: baseWithDuration, relaxed: [...subgenreRelaxed, 'country', 'votes'] })
+  if (hasDurationFilter) {
+    tiers.push({ params: base, relaxed: [...subgenreRelaxed, 'country', 'votes', 'duration'] })
+  }
+  tiers.push({ params: { with_genres: genreId, ...voteFilter }, relaxed: [...subgenreRelaxed, 'country', 'year', ...durationRelaxed] })
+  tiers.push({ params: { with_genres: genreId }, relaxed: [...subgenreRelaxed, 'country', 'year', 'votes', ...durationRelaxed] })
 
   for (let i = 0; i < tiers.length; i++) {
     const tier = tiers[i]
-    const isLastTier = i === tiers.length - 1
+    // en mode strict, on ne tente jamais de palier plus large : on garde ce que le premier palier renvoie
+    const isLastTier = strict || i === tiers.length - 1
     const cleanParams = Object.fromEntries(Object.entries(tier.params).filter(([, v]) => v !== undefined))
     const page = 1 + Math.floor(Math.random() * 3)
     let data = await discover({ ...cleanParams, page: String(page) }, language)
@@ -117,7 +137,7 @@ export async function suggestMovies({
     // on ne s'arrête sur ce palier que s'il offre assez de films inédits ;
     // sinon on tente un palier plus large plutôt que de se contenter de trop peu de résultats
     if (unseen.length < count && !isLastTier) continue
-    if (!unseen.length && !pool.length) continue
+    if (!unseen.length && !pool.length && !isLastTier) continue
 
     const results = unseen.length ? unseen : pool // tout a déjà été vu : on accepte les répétitions plutôt que rien
     const movies = pickRandom(results, Math.min(count, results.length)).map((m) => ({
