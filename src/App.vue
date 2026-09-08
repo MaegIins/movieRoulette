@@ -4,6 +4,7 @@ import { suggestMovies } from './tmdb.js'
 import { GENRES } from './data/genres.js'
 import { COUNTRIES } from './data/countries.js'
 import { DECADES } from './data/decades.js'
+import { CHANGELOG } from './data/changelog.js'
 import { locale, t, joinList } from './i18n.js'
 
 const creationYear = 2026
@@ -123,6 +124,7 @@ function updateCellHeight() {
 function onKeydown(e) {
   if (e.key !== 'Escape') return
   if (filterKey.value) filterKey.value = null
+  else if (showChangelog.value) showChangelog.value = false
   else if (showSettings.value) showSettings.value = false
   else if (showModal.value) showModal.value = false
 }
@@ -294,6 +296,16 @@ const showModal = ref(false)
 let seenMovieIds = new Set()
 
 const showSettings = ref(false)
+const showChangelog = ref(false)
+
+function formatChangelogDate(dateStr) {
+  const date = new Date(`${dateStr}T00:00:00`)
+  return date.toLocaleDateString(locale.value === 'en' ? 'en-US' : 'fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 const FILTER_SETTINGS_KEY = 'movieRoulette.filterSettings'
 
@@ -770,6 +782,28 @@ async function fetchSuggestions() {
       </Transition>
     </Teleport>
 
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showChangelog" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showChangelog = false">
+          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showChangelog = false" :aria-label="t('close')">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-6">{{ t('changelog.title') }}</h2>
+            <div class="flex flex-col gap-5">
+              <div v-for="entry in CHANGELOG" :key="entry.date">
+                <p class="text-muted text-[0.7rem] font-semibold tracking-[0.1em] uppercase mb-1.5">{{ formatChangelogDate(entry.date) }}</p>
+                <ul class="flex flex-col gap-1.5">
+                  <li v-for="(item, i) in entry.items" :key="i" class="text-sm leading-snug flex items-baseline gap-2">
+                    <span class="text-accent font-semibold text-[0.7rem] shrink-0 tabular-nums">v{{ item.version }}</span>
+                    <span>{{ item[locale] ?? item.fr }}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <footer class="w-full max-w-xs sm:max-w-none mx-auto flex flex-col items-center gap-2 text-center px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
       <div class="w-full max-w-[22rem] h-px bg-line mx-auto"></div>
       <p class="text-muted text-xs">
@@ -779,14 +813,20 @@ async function fetchSuggestions() {
       <p class="text-muted text-[0.65rem] max-w-xs">
         {{ t('footer.disclaimer') }}
       </p>
-      <a
-        href="https://github.com/MaegIins/movieRoulette"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-accent hover:underline text-xs"
-      >
-        {{ t('footer.source') }}
-      </a>
+      <p class="flex items-center gap-3 text-xs">
+        <a
+          href="https://github.com/MaegIins/movieRoulette"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-accent hover:underline"
+        >
+          {{ t('footer.source') }}
+        </a>
+        <span class="text-line" aria-hidden="true">·</span>
+        <button type="button" class="text-accent hover:underline" @click="showChangelog = true">
+          {{ t('footer.changelog') }}
+        </button>
+      </p>
     </footer>
   </div>
 </template>
