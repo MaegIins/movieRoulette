@@ -5,7 +5,7 @@ export const CHANGELOG = [
     date: '2026-09-08',
     items: [
       {
-        version: '1.11',
+        version: '1.12',
         fr: "Ajout d'un changelog consultable depuis le pied de page.",
         en: 'Added a changelog viewable from the footer.',
       },
@@ -15,7 +15,7 @@ export const CHANGELOG = [
     date: '2026-09-07',
     items: [
       {
-        version: '1.10',
+        version: '1.11',
         fr: "Ajout de filtres de durée (courts et longs métrages) et d'un mode « résultats stricts » dans les paramètres de suggestion.",
         en: 'Added duration filters (short and feature films) and a "strict results" mode in the suggestion settings.',
       },
@@ -25,13 +25,18 @@ export const CHANGELOG = [
     date: '2026-09-04',
     items: [
       {
+        version: '1.10',
+        fr: "Ajout du favicon et de l'icône d'écran d'accueil, le filtre de votes n'est plus assoupli en même temps que le pays ou la décennie.",
+        en: "Added favicon and home screen icon; the vote filter is no longer relaxed at the same time as the country or decade.",
+      },
+      {
         version: '1.09',
-        fr: "Ajout du favicon et de l'icône d'écran d'accueil, amélioration du filtrage par votes dans les suggestions.",
-        en: 'Added favicon and home screen icon, improved vote filtering in suggestions.',
+        fr: 'Ajout du bouton « tout décocher » dans les filtres et du lien Letterboxd dans le pied de page.',
+        en: 'Added a "deselect all" button in the filters and a Letterboxd link in the footer.',
       },
       {
         version: '1.08',
-        fr: "Amélioration de la mise en page et du style des rouleaux et des suggestions sur mobile.",
+        fr: 'Amélioration de la mise en page et du style des rouleaux et des suggestions sur mobile.',
         en: 'Improved layout and styling of the reels and suggestions on mobile.',
       },
     ],
@@ -46,13 +51,13 @@ export const CHANGELOG = [
       },
       {
         version: '1.06',
-        fr: 'Ajout du choix de langue et mémorisation de la préférence de son coupé.',
-        en: 'Added language selection and stored the mute preference.',
+        fr: 'Mémorisation de la préférence de son coupé et synchronisation de la langue de la page.',
+        en: 'Stored the mute preference and synced the page language.',
       },
       {
         version: '1.05',
-        fr: "Traduction complète de l'interface en français et en anglais.",
-        en: 'Full French and English translation of the interface.',
+        fr: "Traduction complète de l'interface en français et en anglais, avec sélecteur de langue dans les paramètres.",
+        en: 'Full French and English translation of the interface, with a language switcher in settings.',
       },
       {
         version: '1.04',
@@ -61,13 +66,13 @@ export const CHANGELOG = [
       },
       {
         version: '1.03',
-        fr: 'Ajout du pied de page avec mention de copyright et avertissement TMDB.',
-        en: 'Added a footer with copyright notice and TMDB disclaimer.',
+        fr: 'Ajout du pied de page avec mention de copyright, avertissement TMDB et lien vers le code source.',
+        en: 'Added a footer with copyright notice, TMDB disclaimer and a link to the source code.',
       },
       {
         version: '1.02',
-        fr: "Ajout d'animations sur l'atterrissage des rouleaux et l'affichage du sous-genre.",
-        en: 'Added landing animations for the reels and the subgenre display.',
+        fr: "Ajout d'animations : rebond des rouleaux à l'arrêt, apparition progressive des films suggérés et effets au survol des boutons.",
+        en: 'Added animations: reels bounce when they land, suggested movies fade in, and buttons react on hover.',
       },
       {
         version: '1.01',

@@ -552,7 +552,7 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="showModal" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showModal = false">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showModal = false" :aria-label="t('close')">✕</button>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base cursor-pointer" @click="showModal = false" :aria-label="t('close')">✕</button>
             <h2 class="font-display font-semibold text-xl text-center mb-5">{{ t('modal.title') }}</h2>
             <p v-if="loadingSuggestions" class="text-center text-muted py-4">{{ t('suggest.loading') }}</p>
             <p v-else-if="suggestError" class="text-center text-accent py-4">{{ suggestError }}</p>
@@ -601,7 +601,7 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="filterKey" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="closeFilter">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="closeFilter" :aria-label="t('close')">✕</button>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base cursor-pointer" @click="closeFilter" :aria-label="t('close')">✕</button>
             <h2 class="font-display font-semibold text-xl text-center mb-1">{{ t('filter.title', { label: categoryLabel(activeCategory.key) }) }}</h2>
             <p class="text-center text-muted text-xs mb-4">
               {{ t('filter.selected', { count: activeCategory.fullList.length - excluded[filterKey].size, total: activeCategory.fullList.length }) }}
@@ -632,7 +632,7 @@ async function fetchSuggestions() {
       <Transition name="modal">
         <div v-if="showSettings" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showSettings = false">
           <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-sm w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showSettings = false" :aria-label="t('close')">✕</button>
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base cursor-pointer" @click="showSettings = false" :aria-label="t('close')">✕</button>
             <h2 class="font-display font-semibold text-xl text-center mb-6">{{ t('settings.title') }}</h2>
 
             <div class="flex flex-col gap-6">
@@ -785,10 +785,10 @@ async function fetchSuggestions() {
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showChangelog" class="fixed inset-0 bg-ink/55 flex items-center justify-center p-6 z-50" @click.self="showChangelog = false">
-          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base" @click="showChangelog = false" :aria-label="t('close')">✕</button>
-            <h2 class="font-display font-semibold text-xl text-center mb-6">{{ t('changelog.title') }}</h2>
-            <div class="flex flex-col gap-5">
+          <div class="modal-panel relative bg-bg border border-line rounded-xl pt-8 px-6 pb-6 max-w-md w-full max-h-[85vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            <button class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors text-base cursor-pointer" @click="showChangelog = false" :aria-label="t('close')">✕</button>
+            <h2 class="font-display font-semibold text-xl text-center mb-6 shrink-0">{{ t('changelog.title') }}</h2>
+            <div class="flex flex-col gap-5 overflow-y-auto min-h-0 -mx-1 px-1">
               <div v-for="entry in CHANGELOG" :key="entry.date">
                 <p class="text-muted text-[0.7rem] font-semibold tracking-[0.1em] uppercase mb-1.5">{{ formatChangelogDate(entry.date) }}</p>
                 <ul class="flex flex-col gap-1.5">
